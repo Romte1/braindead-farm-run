@@ -1,6 +1,6 @@
-package com.romte.farmrunplanner.data;
+package com.romte.braindeadfarmrun.data;
 
-import com.romte.farmrunplanner.domain.patch.PatchDefinition;
+import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 
 /**
  * Maps a loaded patch object (region, varbit and tile) to its static definition. When several

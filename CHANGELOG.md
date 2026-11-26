@@ -5,6 +5,6 @@
 ### Added
 
 - Initial project skeleton from the RuneLite example plugin.
-- Plugin identity (`Farm Run Planner`), package `com.romte.farmrunplanner` and config group
-  `farmrunplanner`.
+- Plugin identity (`Braindead Farm Run`), package `com.romte.braindeadfarmrun` and config group
+  `braindeadfarmrun`.
 - Build setup, Plugin Hub metadata and CI workflow.

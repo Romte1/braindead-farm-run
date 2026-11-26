@@ -1,4 +1,4 @@
-package com.romte.farmrunplanner.domain.patch;
+package com.romte.braindeadfarmrun.domain.patch;
 
 /**
  * The patch types supported by the first release. More types can be added later without

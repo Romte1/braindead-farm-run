@@ -1,7 +1,7 @@
-# Farm Run Planner — Plan inicial
+# Braindead Farm Run — Plan inicial
 
-> Estado: **borrador para revisión**. No hay implementación todavía.
-> Fecha: 2026-11-25.
+> Estado: **aprobado; Fase 1 en curso**.
+> Fecha: 2026-11-26.
 
 ## 1. Objetivo
 
@@ -26,12 +26,12 @@ La prioridad es que el plugin sea:
 
 | Campo | Valor propuesto |
 |---|---|
-| Nombre visible | **Farm Run Planner** |
-| Repositorio | `Romte1/farm-run-planner` (público, Plugin Hub) |
-| Paquete Java | `com.romte.farmrunplanner` |
-| Clase principal | `FarmRunPlannerPlugin` |
-| Plugin ID resultante | `farmrunplannerplugin` |
-| Config group | `farmrunplanner` |
+| Nombre visible | **Braindead Farm Run** |
+| Repositorio | `Romte1/braindead-farm-run` (público, Plugin Hub) |
+| Paquete Java | `com.romte.braindeadfarmrun` |
+| Clase principal | `BraindeadFarmRunPlugin` |
+| Plugin ID resultante | `braindeadfarmrunplugin` |
+| Config group | `braindeadfarmrun` |
 | Licencia | BSD-2-Clause, copyright del autor del plugin |
 | Versión inicial | `0.1.0` |
 | `build` del Hub | `standard` (sin dependencias extra) |
@@ -53,7 +53,7 @@ Notas:
 - v1 solo con **allotment, herbs, tree y fruit tree**.
 - Solo lo esencial: sin historial, profit, yield, XP, contratos, enlaces sociales ni banner.
 - Sin migración desde el plugin anterior.
-- Repositorio definitivo: `Romte1/farm-run-planner`.
+- Repositorio definitivo: `Romte1/braindead-farm-run`.
 
 ## 3. Principios de ingeniería
 
@@ -78,7 +78,7 @@ Sacados de `AGENTS.md` y de los problemas reales del plugin anterior:
 Generado desde `runelite/example-plugin` (o su script `create_new_plugin.py`):
 
 ```
-farm-run-planner/
+braindead-farm-run/
 ├── build.gradle
 ├── settings.gradle
 ├── gradle/wrapper/...
@@ -93,9 +93,9 @@ farm-run-planner/
 ├── .gitignore
 ├── .github/workflows/build.yml
 └── src/
-    ├── main/java/com/romte/farmrunplanner/...
+    ├── main/java/com/romte/braindeadfarmrun/...
     ├── main/resources/...
-    ├── test/java/com/romte/farmrunplanner/...
+    ├── test/java/com/romte/braindeadfarmrun/...
     └── test/resources/logback-test.xml
 ```
 
@@ -105,7 +105,7 @@ farm-run-planner/
 - `compileOnly net.runelite:client`, Lombok `compileOnly`/`annotationProcessor`.
 - `testImplementation` JUnit 4.12 + client + jshell.
 - `options.release = 11`.
-- Tarea `run` con `pluginMainClass` apuntando a `FarmRunPlannerPluginTest`.
+- Tarea `run` con `pluginMainClass` apuntando a `BraindeadFarmRunPluginTest`.
 - Tarea `shadowJar` del template (opcional, pero se conserva).
 - `runelite-plugin.properties` con `build=standard`.
 
@@ -123,10 +123,10 @@ UI / Overlays / Bank  ->  Runtime services  ->  Domain (Java puro)
 ### 5.1. Paquetes
 
 ```
-com.romte.farmrunplanner
-├── FarmRunPlannerPlugin          // ciclo de vida y cableado de eventos
-├── FarmRunPlannerConfig          // configuración
-├── FarmRunPlannerPanel           // panel lateral (vista)
+com.romte.braindeadfarmrun
+├── BraindeadFarmRunPlugin          // ciclo de vida y cableado de eventos
+├── BraindeadFarmRunConfig          // configuración
+├── BraindeadFarmRunPanel           // panel lateral (vista)
 ├── domain/                       // Java puro, sin RuneLite Client
 │   ├── patch/                    // PatchType, Crop, PatchDefinition, PatchState
 │   ├── run/                      // RunOptions, RunPlan, RunStop, RouteLeg
@@ -174,7 +174,7 @@ com.romte.farmrunplanner
 
 ### 5.2. Responsabilidades
 
-- **`FarmRunPlannerPlugin`**: solo `startUp`, `shutDown`, `@Provides` y reenvío de eventos a
+- **`BraindeadFarmRunPlugin`**: solo `startUp`, `shutDown`, `@Provides` y reenvío de eventos a
   los servicios. Objetivo: menos de ~300 líneas.
 - **`domain`**: enums, records/clases inmutables y reglas. Cero imports de `net.runelite.api`.
 - **`data`**: tablas estáticas (cultivos, patches, teleports, pagos, herramientas). Se
@@ -381,7 +381,7 @@ Secciones: `Run`, `Route`, `Supplies`, `Bank`, `UI`, `Notifications`, `Advanced`
 - v1: timers y estado de patches en `ConfigManager` como JSON pequeño por perfil. Sin I/O de
   archivos.
 - Si el JSON crece demasiado: `StateStore` con implementación de archivo en
-  `~/.runelite/farm-run-planner/`, escritura en un ejecutor y lectura al arrancar.
+  `~/.runelite/braindead-farm-run/`, escritura en un ejecutor y lectura al arrancar.
 - Guardado con debounce; nunca en el hilo del cliente.
 - Sin migración desde `herbrunhelper`: se empieza limpio.
 
@@ -411,7 +411,7 @@ Java puro, sin `Client`:
 
 Tests de integración ligeros:
 
-- `FarmRunPlannerPluginTest` para arrancar el cliente en desarrollo.
+- `BraindeadFarmRunPluginTest` para arrancar el cliente en desarrollo.
 - Fixtures de planes (JSON) para detectar regresiones.
 
 ### 13.2. CI
@@ -516,7 +516,7 @@ Fijadas:
 - v1 con **allotment, herbs, tree y fruit tree**.
 - Solo lo esencial: sin historial, profit, yield, XP, contratos, enlaces sociales ni banner.
 - Sin migración desde `herbrunhelper`.
-- Repositorio: `Romte1/farm-run-planner`.
+- Repositorio: `Romte1/braindead-farm-run`.
 
 Pendientes menores (se resuelven durante la implementación):
 
@@ -541,7 +541,7 @@ Pendientes menores (se resuelven durante la implementación):
 
 Plan aprobado. Fase 0 en curso:
 
-1. Generar el repo `Romte1/farm-run-planner` desde `runelite/example-plugin`.
+1. Generar el repo `Romte1/braindead-farm-run` desde `runelite/example-plugin`.
 2. Renombrar identidad y dejar el esqueleto compilando.
 3. CI, README, LICENSE, CHANGELOG y AGENTS.md.
 4. Después, Fase 1 (dominio + timers) sin tocar aún el banco.

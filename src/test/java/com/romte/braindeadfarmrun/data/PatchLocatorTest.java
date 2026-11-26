@@ -1,10 +1,10 @@
-package com.romte.farmrunplanner.data;
+package com.romte.braindeadfarmrun.data;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-import com.romte.farmrunplanner.domain.patch.PatchDefinition;
+import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import org.junit.Test;
 
 public class PatchLocatorTest

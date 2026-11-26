@@ -1,4 +1,4 @@
-package com.romte.farmrunplanner.data;
+package com.romte.braindeadfarmrun.data;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -6,8 +6,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import com.romte.farmrunplanner.domain.patch.PatchDefinition;
-import com.romte.farmrunplanner.domain.patch.PatchType;
+import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
+import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;

@@ -1,7 +1,7 @@
-package com.romte.farmrunplanner.data;
+package com.romte.braindeadfarmrun.data;
 
-import com.romte.farmrunplanner.domain.patch.PatchDefinition;
-import com.romte.farmrunplanner.domain.patch.PatchType;
+import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
+import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;

@@ -1,4 +1,4 @@
-package com.romte.farmrunplanner.domain.patch;
+package com.romte.braindeadfarmrun.domain.patch;
 
 import java.time.Instant;
 import java.util.Objects;

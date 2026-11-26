@@ -14,7 +14,7 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
-def pluginMainClass = 'com.romte.farmrunplanner.FarmRunPlannerPluginTest'
+def pluginMainClass = 'com.romte.braindeadfarmrun.BraindeadFarmRunPluginTest'
 
 dependencies {
 	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
@@ -27,7 +27,7 @@ dependencies {
 	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
 }
 
-group = 'com.romte.farmrunplanner'
+group = 'com.romte.braindeadfarmrun'
 version = '0.1.0'
 
 tasks.withType(JavaCompile).configureEach {

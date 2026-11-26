@@ -1,4 +1,4 @@
-# Farm Run Planner
+# Braindead Farm Run
 
 A RuneLite plugin for planning and tracking **allotment, herb, tree and fruit tree** runs.
 
@@ -47,7 +47,7 @@ On Windows:
 
 ## Configuration
 
-The plugin uses the `farmrunplanner` config group. Settings will be added as each phase lands.
+The plugin uses the `braindeadfarmrun` config group. Settings will be added as each phase lands.
 
 ## Development
 

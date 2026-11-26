@@ -1,13 +1,13 @@
-package com.romte.farmrunplanner;
+package com.romte.braindeadfarmrun;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class FarmRunPlannerPluginTest
+public class BraindeadFarmRunPluginTest
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(FarmRunPlannerPlugin.class);
+		ExternalPluginManager.loadBuiltin(BraindeadFarmRunPlugin.class);
 		RuneLite.main(args);
 	}
 }

@@ -1,14 +1,14 @@
-package com.romte.farmrunplanner;
+package com.romte.braindeadfarmrun;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
 
-@ConfigGroup(FarmRunPlannerConfig.GROUP)
-public interface FarmRunPlannerConfig extends Config
+@ConfigGroup(BraindeadFarmRunConfig.GROUP)
+public interface BraindeadFarmRunConfig extends Config
 {
-	String GROUP = "farmrunplanner";
+	String GROUP = "braindeadfarmrun";
 
 	@ConfigSection(
 		name = "Advanced",

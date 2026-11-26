@@ -1,7 +1,7 @@
-# Agent Guidelines — Farm Run Planner
+# Agent Guidelines — Braindead Farm Run
 
-RuneLite plugin. Java 11, source in `src/main/java/com/romte/farmrunplanner`, tests in
-`src/test/java/com/romte/farmrunplanner`.
+RuneLite plugin. Java 11, source in `src/main/java/com/romte/braindeadfarmrun`, tests in
+`src/test/java/com/romte/braindeadfarmrun`.
 
 ## Scope (v1)
 
@@ -53,7 +53,7 @@ RuneLite plugin. Java 11, source in `src/main/java/com/romte/farmrunplanner`, te
 
 ## Config
 
-- Keep the config group specific (`farmrunplanner`) and never rename a group/key without a
+- Keep the config group specific (`braindeadfarmrun`) and never rename a group/key without a
   migration.
 - Do not add dead or duplicated keys.
 - Third-party-server features must be opt-in and carry the required warning.

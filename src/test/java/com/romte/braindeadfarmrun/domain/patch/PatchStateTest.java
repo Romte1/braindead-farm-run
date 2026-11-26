@@ -1,4 +1,4 @@
-package com.romte.farmrunplanner.domain.patch;
+package com.romte.braindeadfarmrun.domain.patch;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
