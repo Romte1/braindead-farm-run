@@ -46,6 +46,24 @@ public class PatchStateTest
 	}
 
 	@Test
+	public void stumpAndCheckHealthOverrideGrowth()
+	{
+		PatchState state = PatchState.planted(PATCH, Crop.OAK, PLANTED, false);
+		assertEquals(PatchState.Status.STUMP, state.withStump(true).statusAt(PLANTED));
+		assertEquals(PatchState.Status.READY, state.withCheckHealth(true).statusAt(PLANTED));
+	}
+
+	@Test
+	public void fellIsAFlagWithoutChangingStatus()
+	{
+		PatchState state = PatchState.planted(PATCH, Crop.OAK, PLANTED, false).withFell(true);
+		assertTrue(state.isFell());
+		assertEquals(PatchState.Status.GROWING, state.statusAt(PLANTED));
+		assertEquals(PatchState.Status.READY,
+			state.statusAt(PLANTED.plus(Duration.ofMinutes(Crop.OAK.getGrowthMinutes()))));
+	}
+
+	@Test
 	public void clearingResetsThePatch()
 	{
 		PatchState state = PatchState.planted(PATCH, Crop.GUAM, PLANTED, true).cleared();
