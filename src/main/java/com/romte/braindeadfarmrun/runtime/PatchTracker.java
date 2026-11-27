@@ -273,7 +273,7 @@ public class PatchTracker
 			{
 				boolean newer = previous == null || previous.getPlantedAt() == null
 					|| previous.getPlantedAt().toEpochMilli() < changedAt.toEpochMilli() - 60_000L;
-				if (newer && (previous == null || previous.getCrop() != null))
+				if (newer && previous != null && previous.getCrop() != null)
 				{
 					states.put(patch.getId(), PatchState.empty(patch.getId()));
 					changed = true;

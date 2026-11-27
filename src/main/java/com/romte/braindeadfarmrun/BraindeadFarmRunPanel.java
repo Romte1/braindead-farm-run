@@ -10,6 +10,7 @@ import java.awt.Color;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import javax.swing.BorderFactory;
@@ -61,16 +62,22 @@ class BraindeadFarmRunPanel extends PluginPanel
 	{
 		Map<String, PatchState> snapshot = tracker.snapshot();
 		Instant now = Instant.now();
-		List<String> lines = new ArrayList<>();
+		List<PatchState> active = new ArrayList<>();
 		for (PatchState state : snapshot.values())
 		{
-			if (state.getCrop() == null)
+			if (state.getCrop() != null)
 			{
-				continue;
+				active.add(state);
 			}
-			PatchDefinition patch = Patches.byId(state.getPatchId());
-			String name = patch != null ? patch.getDisplayName() : state.getPatchId();
-			lines.add(name + "\n  " + state.getCrop().getDisplayName() + " - "
+		}
+		active.sort(Comparator
+			.comparingLong((PatchState state) -> sortMillis(state, now))
+			.thenComparing(BraindeadFarmRunPanel::patchName));
+
+		List<String> lines = new ArrayList<>();
+		for (PatchState state : active)
+		{
+			lines.add(patchName(state) + "\n  " + state.getCrop().getDisplayName() + " - "
 				+ describe(state, now));
 		}
 		if (lines.isEmpty())
@@ -86,6 +93,21 @@ class BraindeadFarmRunPanel extends PluginPanel
 				text.setText(value);
 			}
 		});
+	}
+
+	private static long sortMillis(PatchState state, Instant now)
+	{
+		if (state.statusAt(now) == PatchState.Status.GROWING)
+		{
+			return GrowthClock.remaining(state.getCrop(), state.getPlantedAt(), now).toMillis();
+		}
+		return 0L;
+	}
+
+	private static String patchName(PatchState state)
+	{
+		PatchDefinition patch = Patches.byId(state.getPatchId());
+		return patch != null ? patch.getDisplayName() : state.getPatchId();
 	}
 
 	private static String describe(PatchState state, Instant now)
