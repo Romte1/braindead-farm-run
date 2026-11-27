@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Item;
@@ -47,6 +48,7 @@ import net.runelite.client.util.Text;
  * own headers and labels as children of the bank item container. No Bank Tags tag and no widget
  * moving on every bank rebuild.
  */
+@Slf4j
 @Singleton
 public class BankTab
 {
@@ -59,6 +61,7 @@ public class BankTab
 	private static final int TEXT_HEIGHT = 15;
 	private static final int ICON_SIZE = 10;
 	private static final int PLANNED_ROW_SPACING = 64;
+	private static final int MAX_REST_ITEMS = 200;
 	private static final int ITEM_WIDTH = 36;
 	private static final int ITEM_HEIGHT = 32;
 	private static final int LABEL_WIDTH = 46;
@@ -91,8 +94,14 @@ public class BankTab
 	private final Map<Widget, BankSupplyLine> lineByWidget = new HashMap<>();
 	private int originalContainerChildren = -1;
 	private volatile Supplier<List<BankSupplyLine>> plan = Collections::emptyList;
+	private volatile List<BankSupplyLine> cachedPlan = Collections.emptyList();
+	private volatile boolean planDirty = true;
 	private volatile boolean enabled;
 	private volatile boolean runActive;
+	private boolean layingOut;
+	private boolean scrollUpdateQueued;
+	private int lastScrollHeight = -1;
+	private int lastScroll = -1;
 
 	@Inject
 	BankTab(Client client, ClientThread clientThread, ChatMessageManager chatMessageManager,
@@ -130,6 +139,11 @@ public class BankTab
 			return;
 		}
 		runActive = active;
+		planDirty = true;
+		if (!active)
+		{
+			cachedPlan = Collections.emptyList();
+		}
 		clientThread.invokeLater(() ->
 		{
 			if (!runActive)
@@ -142,6 +156,12 @@ public class BankTab
 				button.init();
 			}
 		});
+	}
+
+	/** The route results changed; the next layout recomputes the supply plan once. */
+	public void invalidatePlan()
+	{
+		planDirty = true;
 	}
 
 	public void onGameTick()
@@ -196,6 +216,11 @@ public class BankTab
 	{
 		if (enabled && event.getGroupId() == InterfaceID.BANKMAIN)
 		{
+			lastScrollHeight = -1;
+			lastScroll = -1;
+			originalContainerChildren = -1;
+			addedWidgets.clear();
+			lineByWidget.clear();
 			if (runActive)
 			{
 				button.reload();
@@ -257,8 +282,7 @@ public class BankTab
 			// the WidgetLoaded init ran too early.
 			button.init();
 		}
-		removeAddedWidgets();
-		if (!button.isActive())
+		if (layingOut)
 		{
 			return;
 		}
@@ -267,12 +291,22 @@ public class BankTab
 		{
 			return;
 		}
-		Widget[] children = itemContainer.getChildren();
-		if (children != null && originalContainerChildren == -1)
+		ensureOriginalChildren(itemContainer);
+		removeAddedWidgets();
+		if (!button.isActive())
 		{
-			originalContainerChildren = children.length;
+			return;
 		}
-		layOut(itemContainer, itemContainer.getDynamicChildren(), plan.get());
+		computePlanIfDirty();
+		layingOut = true;
+		try
+		{
+			layOut(itemContainer, itemContainer.getDynamicChildren(), cachedPlan);
+		}
+		finally
+		{
+			layingOut = false;
+		}
 	}
 
 	public void onMenuOptionClicked(MenuOptionClicked event)
@@ -311,7 +345,7 @@ public class BankTab
 
 	public void refresh()
 	{
-		if (!runActive || !button.isActive())
+		if (!runActive || !button.isActive() || layingOut)
 		{
 			return;
 		}
@@ -320,8 +354,47 @@ public class BankTab
 		{
 			return;
 		}
-		removeAddedWidgets();
-		layOut(itemContainer, itemContainer.getDynamicChildren(), plan.get());
+		ensureOriginalChildren(itemContainer);
+		computePlanIfDirty();
+		layingOut = true;
+		try
+		{
+			removeAddedWidgets();
+			layOut(itemContainer, itemContainer.getDynamicChildren(), cachedPlan);
+		}
+		finally
+		{
+			layingOut = false;
+		}
+	}
+
+	private void ensureOriginalChildren(Widget itemContainer)
+	{
+		if (originalContainerChildren != -1)
+		{
+			return;
+		}
+		Widget[] children = itemContainer.getChildren();
+		if (children != null)
+		{
+			originalContainerChildren = children.length;
+		}
+	}
+
+	private void computePlanIfDirty()
+	{
+		if (!planDirty)
+		{
+			return;
+		}
+		List<BankSupplyLine> computed = plan.get();
+		if (computed == null)
+		{
+			return; // route results are still arriving
+		}
+		cachedPlan = computed;
+		planDirty = false;
+		log.debug("Bank tab plan computed: {} lines", cachedPlan.size());
 	}
 
 	private void layOut(Widget itemContainer, Widget[] itemWidgets, List<BankSupplyLine> lines)
@@ -352,7 +425,12 @@ public class BankTab
 		LinkedHashSet<Integer> rest = new LinkedHashSet<>();
 		for (Item item : bank.getItems())
 		{
-			if (item.getId() <= -1 || item.getId() == BANK_FILLER || planned.contains(item.getId()))
+			if (rest.size() >= MAX_REST_ITEMS)
+			{
+				break;
+			}
+			if (item.getId() <= -1 || item.getId() == BANK_FILLER || planned.contains(item.getId())
+				|| isUnplannedRune(item.getId()))
 			{
 				continue;
 			}
@@ -409,10 +487,21 @@ public class BankTab
 			}
 		}
 
-		itemContainer.setScrollHeight(Math.max(height, itemContainer.getHeight()));
+		int scrollHeight = Math.max(height, itemContainer.getHeight());
+		itemContainer.setScrollHeight(scrollHeight);
 		int scroll = itemContainer.getScrollY();
-		clientThread.invokeLater(() -> client.runScript(ScriptID.UPDATE_SCROLLBAR,
-			InterfaceID.Bankmain.SCROLLBAR, InterfaceID.Bankmain.ITEMS, scroll));
+		if ((scrollHeight != lastScrollHeight || scroll != lastScroll) && !scrollUpdateQueued)
+		{
+			lastScrollHeight = scrollHeight;
+			lastScroll = scroll;
+			scrollUpdateQueued = true;
+			clientThread.invokeLater(() ->
+			{
+				scrollUpdateQueued = false;
+				client.runScript(ScriptID.UPDATE_SCROLLBAR,
+					InterfaceID.Bankmain.SCROLLBAR, InterfaceID.Bankmain.ITEMS, scroll);
+			});
+		}
 	}
 
 	private int drawSection(Widget itemContainer, List<BankSupplyLine> lines, int height,
@@ -536,9 +625,12 @@ public class BankTab
 	private void drawItem(Widget widget, int itemId, ItemContainer bank, BankSupplyLine line)
 	{
 		int qty = bank.count(itemId);
+		// Planned rows show the amount to withdraw, not the whole bank stack; otherwise a
+		// 50k rune stack in the bank looks like a 50k requirement.
+		int shownQty = line == null ? qty : Math.min(qty, Math.max(1, line.need));
 		ItemComposition def = client.getItemDefinition(itemId);
 		widget.setItemId(itemId);
-		widget.setItemQuantity(qty);
+		widget.setItemQuantity(shownQty);
 		widget.setItemQuantityMode(1);
 		widget.setDragDeadTime(1000);
 		widget.setName("<col=ff9040>" + def.getName() + "</col>");
@@ -622,6 +714,18 @@ public class BankTab
 		widget.setAction(10, "Examine");
 	}
 
+	/** Runes that are not part of the plan belong to the normal bank, not the run tab. */
+	private boolean isUnplannedRune(int itemId)
+	{
+		ItemComposition def = client.getItemDefinition(itemId);
+		if (def == null)
+		{
+			return false;
+		}
+		String name = def.getName().toLowerCase(Locale.ROOT);
+		return name.endsWith("rune") || name.contains(" rune");
+	}
+
 	private static int count(ItemContainer container, int[] itemIds)
 	{
 		if (container == null)
@@ -636,27 +740,32 @@ public class BankTab
 		return total;
 	}
 
-	private static PendingText neededText(Widget widget, BankSupplyLine line)
+	private PendingText neededText(Widget widget, BankSupplyLine line)
 	{
 		String needed = QuantityFormatter.quantityToStackSize(line.need)
 			+ (line.noted ? " noted" : "");
 		int x = widget.getOriginalX() - 5;
 		int y = widget.getOriginalY() + ITEM_HEIGHT + 1;
+		int inBank = count(client.getItemContainer(InventoryID.BANK), line.itemIds);
+		int carried = count(client.getItemContainer(InventoryID.INV), line.itemIds)
+			+ count(client.getItemContainer(InventoryID.WORN), line.itemIds);
+		int have = inBank + carried;
 		Color colour;
 		int sprite;
-		switch (line.status())
+		if (carried >= line.need)
 		{
-			case CARRIED:
-				colour = CARRIED;
-				sprite = CHECK_SPRITE;
-				break;
-			case IN_STORAGE:
-				colour = IN_STORAGE;
-				sprite = -1;
-				break;
-			default:
-				colour = MISSING;
-				sprite = CROSS_SPRITE;
+			colour = CARRIED;
+			sprite = CHECK_SPRITE;
+		}
+		else if (have >= line.need)
+		{
+			colour = IN_STORAGE;
+			sprite = -1;
+		}
+		else
+		{
+			colour = MISSING;
+			sprite = CROSS_SPRITE;
 		}
 		return new PendingText(needed, colour.getRGB(), x, y, sprite);
 	}
@@ -669,9 +778,14 @@ public class BankTab
 
 	private void showDetails(BankSupplyLine line)
 	{
+		int inBank = count(client.getItemContainer(InventoryID.BANK), line.itemIds);
+		int carried = count(client.getItemContainer(InventoryID.INV), line.itemIds)
+			+ count(client.getItemContainer(InventoryID.WORN), line.itemIds);
+		String where = carried >= line.need ? "carried"
+			: inBank + carried >= line.need ? "in your bank" : null;
 		String message = "You need " + QuantityFormatter.formatNumber(line.need) + " x "
 			+ Text.removeTags(line.name) + ". "
-			+ (line.where == null || line.where.isEmpty() ? "You don't have any." : "You have " + line.where + ".")
+			+ (where == null ? "You don't have any." : "You have " + where + ".")
 			+ (line.details == null || line.details.isEmpty() ? "" : " " + line.details);
 		chatMessageManager.queue(QueuedMessage.builder()
 			.type(ChatMessageType.ITEM_EXAMINE)

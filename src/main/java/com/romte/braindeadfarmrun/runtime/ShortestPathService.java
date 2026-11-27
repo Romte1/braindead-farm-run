@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -39,6 +40,7 @@ public class ShortestPathService
 	private final Client client;
 	private final ConfigManager configManager;
 	private final Map<String, QueryResult> results = new ConcurrentHashMap<>();
+	private volatile int resultVersion;
 
 	@Inject
 	ShortestPathService(EventBus eventBus, Client client, ConfigManager configManager)
@@ -191,6 +193,12 @@ public class ShortestPathService
 		results.clear();
 	}
 
+	/** Increments only when a stored result actually changes, so callers can debounce. */
+	public int resultVersion()
+	{
+		return resultVersion;
+	}
+
 	@Subscribe
 	public void onPluginMessage(PluginMessage event)
 	{
@@ -240,7 +248,12 @@ public class ShortestPathService
 		{
 			log.debug("Shortest Path result {} needs items {}", id, missingItems);
 		}
-		results.put((String) id, new QueryResult(reached, lines, missingItems));
+		QueryResult next = new QueryResult(reached, lines, missingItems);
+		QueryResult previous = results.put((String) id, next);
+		if (!next.equals(previous))
+		{
+			resultVersion++;
+		}
 	}
 
 	private static String id(int index)
@@ -259,6 +272,28 @@ public class ShortestPathService
 			this.reached = reached;
 			this.transports = Collections.unmodifiableList(transports);
 			this.missingItems = Collections.unmodifiableList(missingItems);
+		}
+
+		@Override
+		public boolean equals(Object other)
+		{
+			if (this == other)
+			{
+				return true;
+			}
+			if (!(other instanceof QueryResult))
+			{
+				return false;
+			}
+			QueryResult result = (QueryResult) other;
+			return reached == result.reached && transports.equals(result.transports)
+				&& missingItems.equals(result.missingItems);
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(reached, transports, missingItems);
 		}
 	}
 }

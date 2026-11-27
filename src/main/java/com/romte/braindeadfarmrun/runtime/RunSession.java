@@ -10,6 +10,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
@@ -86,7 +87,44 @@ public class RunSession
 
 	public List<String> teleportsFor(int stopIndex)
 	{
-		return routeReady ? shortestPath.transportsFor(stopIndex) : Collections.emptyList();
+		List<String> lines = shortestPath.transportsFor(stopIndex);
+		if (routeReady || lines.isEmpty())
+		{
+			return routeReady ? lines : Collections.emptyList();
+		}
+		// Before the bank closes, Shortest Path's result still contains the bank-visit hop.
+		// Show the actual destination teleport as a hint; the full path is shown after the
+		// inventory-only requery.
+		for (int i = lines.size() - 1; i >= 0; i--)
+		{
+			String line = lines.get(i);
+			String lower = line.toLowerCase(Locale.ROOT);
+			if (!lower.contains("walk") && !lower.contains("soul wars")
+				&& !lower.contains("grand exchange"))
+			{
+				return Collections.singletonList(line);
+			}
+		}
+		return Collections.singletonList(lines.get(lines.size() - 1));
+	}
+
+	/** True when every remaining stop has a Shortest Path result for the current mode. */
+	public boolean allResultsReady()
+	{
+		if (!active)
+		{
+			return false;
+		}
+		List<PatchDefinition> current = route;
+		int currentIndex = index;
+		for (int i = currentIndex; i < current.size(); i++)
+		{
+			if (!shortestPath.hasResult(i))
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public boolean hasShortestPathResult(int stopIndex)
@@ -108,7 +146,7 @@ public class RunSession
 	{
 		List<String> all = new ArrayList<>();
 		List<PatchDefinition> current = route;
-		for (int i = 0; i < current.size(); i++)
+		for (int i = index; i < current.size(); i++)
 		{
 			all.addAll(shortestPath.transportsFor(i));
 		}
@@ -119,7 +157,7 @@ public class RunSession
 	{
 		LinkedHashSet<Integer> all = new LinkedHashSet<>();
 		List<PatchDefinition> current = route;
-		for (int i = 0; i < current.size(); i++)
+		for (int i = index; i < current.size(); i++)
 		{
 			all.addAll(shortestPath.missingItemsFor(i));
 		}

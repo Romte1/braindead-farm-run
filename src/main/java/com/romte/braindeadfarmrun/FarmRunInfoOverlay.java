@@ -85,7 +85,8 @@ public class FarmRunInfoOverlay extends OverlayPanel
 	{
 		if (!runSession.routeReady())
 		{
-			return "Withdraw supplies first";
+			List<String> hints = runSession.teleportsFor(index);
+			return hints.isEmpty() ? "Withdraw supplies first" : String.join(" > ", hints);
 		}
 		if (!runSession.hasShortestPathResult(index))
 		{

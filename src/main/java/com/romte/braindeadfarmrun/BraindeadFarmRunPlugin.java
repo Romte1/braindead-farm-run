@@ -13,6 +13,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.ScriptCallbackEvent;
 import net.runelite.api.events.ScriptPostFired;
@@ -22,6 +23,7 @@ import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.GameState;
 import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -82,9 +84,10 @@ public class BraindeadFarmRunPlugin extends Plugin
 	private NavigationButton navButton;
 	private BraindeadFarmRunPanel panel;
 	private int panelTicks;
-	private int bankTicks;
 	private int questTicks;
 	private boolean bankRefreshQueued;
+	private boolean bankLayoutDirty;
+	private int lastResultVersion = -1;
 
 	@Override
 	protected void startUp()
@@ -94,8 +97,10 @@ public class BraindeadFarmRunPlugin extends Plugin
 		eventBus.register(shortestPathService);
 		eventBus.register(runSession);
 
-		bankTab.startUp(() -> supplyPlanner.plan(runSession.selectedTypes(),
-			patchTracker.snapshot(), runSession.allTeleportLines(), runSession.allRequiredItems()));
+		bankTab.startUp(() -> runSession.allResultsReady()
+			? supplyPlanner.plan(runSession.selectedTypes(), patchTracker.snapshot(),
+				runSession.allTeleportLines(), runSession.allRequiredItems())
+			: null);
 		bankTab.setEnabled(true);
 		overlayManager.add(infoOverlay);
 		clientThread.invokeLater(supplyPlanner::refreshQuestState);
@@ -139,13 +144,24 @@ public class BraindeadFarmRunPlugin extends Plugin
 		}
 		bankTab.setRunActive(runSession.isActive());
 		bankTab.onGameTick();
+		if (bankLayoutDirty)
+		{
+			bankLayoutDirty = false;
+			bankTab.refresh();
+		}
 		if (panel != null && ++panelTicks % 5 == 0)
 		{
 			panel.refresh();
 		}
-		if (++bankTicks % 20 == 0)
+	}
+
+	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		int id = event.getContainerId();
+		if (id == InventoryID.BANK || id == InventoryID.INV || id == InventoryID.WORN)
 		{
-			bankTab.refresh();
+			bankLayoutDirty = true;
 		}
 	}
 
@@ -176,12 +192,23 @@ public class BraindeadFarmRunPlugin extends Plugin
 		{
 			return;
 		}
-		// The bank tab plans travel items, so refresh it once per tick as route results arrive.
+		// Wait for the whole route's results, then rebuild the bank plan once. Refreshing on
+		// every result would recompute and relayout the tab repeatedly while the bank is open.
 		bankRefreshQueued = true;
 		clientThread.invokeLater(() ->
 		{
 			bankRefreshQueued = false;
-			bankTab.refresh();
+			int version = shortestPathService.resultVersion();
+			if (version == lastResultVersion)
+			{
+				return;
+			}
+			lastResultVersion = version;
+			if (runSession.allResultsReady())
+			{
+				bankTab.invalidatePlan();
+				bankTab.refresh();
+			}
 		});
 	}
 
@@ -198,6 +225,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		{
 			// The player has had a chance to withdraw the tab's supplies; recompute the leg
 			// with the inventory they are actually leaving with.
+			bankTab.invalidatePlan();
 			runSession.refreshRouteForInventory();
 		}
 	}
@@ -232,6 +260,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		if (BraindeadFarmRunConfig.GROUP.equals(event.getGroup())
 			&& "bottomlessCompostBucket".equals(event.getKey()))
 		{
+			bankTab.invalidatePlan();
 			bankTab.refresh();
 			if (panel != null)
 			{

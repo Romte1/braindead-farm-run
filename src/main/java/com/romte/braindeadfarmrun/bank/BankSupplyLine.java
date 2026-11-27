@@ -5,13 +5,6 @@ import java.util.Arrays;
 /** One row of the bank supply tab. */
 public final class BankSupplyLine
 {
-	enum Status
-	{
-		CARRIED,
-		IN_STORAGE,
-		MISSING
-	}
-
 	final SupplyGroup group;
 	final String name;
 	final int need;
@@ -39,15 +32,6 @@ public final class BankSupplyLine
 		this.wear = wear;
 		this.noted = noted;
 		this.details = details;
-	}
-
-	Status status()
-	{
-		if (carried >= need)
-		{
-			return Status.CARRIED;
-		}
-		return have >= need ? Status.IN_STORAGE : Status.MISSING;
 	}
 
 	@Override

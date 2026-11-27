@@ -303,7 +303,10 @@ class BraindeadFarmRunPanel extends PluginPanel
 			List<String> teleports = session.teleportsFor(i);
 			if (!session.routeReady())
 			{
-				text.append("     Withdraw supplies first\n");
+				if (!teleports.isEmpty())
+				{
+					text.append("     ").append(teleports.get(0)).append('\n');
+				}
 			}
 			else if (!session.hasShortestPathResult(i))
 			{
