@@ -83,6 +83,10 @@ public class FarmRunInfoOverlay extends OverlayPanel
 
 	private String teleportText(int index)
 	{
+		if (!runSession.routeReady())
+		{
+			return "Withdraw supplies first";
+		}
 		if (!runSession.hasShortestPathResult(index))
 		{
 			return "Calculating...";

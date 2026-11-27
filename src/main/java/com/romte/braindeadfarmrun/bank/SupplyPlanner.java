@@ -143,6 +143,13 @@ public class SupplyPlanner
 			addRequiredItem(lines, runeNeeds, itemId);
 		}
 		planRunes(lines, runeNeeds, bank, inventory, worn);
+		for (MutableLine line : lines.values())
+		{
+			if (line.uses > 0)
+			{
+				line.need = travelNeed(line, bank, inventory, worn);
+			}
+		}
 
 		List<BankSupplyLine> result = new ArrayList<>();
 		Set<String> wornSlots = new HashSet<>();
@@ -211,8 +218,7 @@ public class SupplyPlanner
 				}
 			}
 		}
-		SupplyGroup group = SupplyGroup.TRAVEL;
-		add(lines, group, name, 1, new int[]{id}, false);
+		addTravelUse(lines, name, new int[]{id});
 	}
 
 	private void addTransport(String display, Map<String, MutableLine> lines,
@@ -220,6 +226,7 @@ public class SupplyPlanner
 	{
 		String lower = display.toLowerCase(Locale.ROOT);
 		if (lower.contains("soul wars") || lower.contains("minigame")
+			|| lower.contains("grand exchange")
 			|| lower.contains("fairy ring") || lower.contains("spirit tree")
 			|| lower.contains("tree gnome village") || lower.contains("walk")
 			|| lower.contains("gnome glider") || lower.contains("canoe")
@@ -248,6 +255,34 @@ public class SupplyPlanner
 		else if (lower.contains("slayer ring"))
 		{
 			addChargedTravel(lines, "Slayer ring");
+		}
+		else if (lower.contains("ring of dueling"))
+		{
+			addChargedTravel(lines, "Ring of dueling");
+		}
+		else if (lower.contains("games necklace"))
+		{
+			addChargedTravel(lines, "Games necklace");
+		}
+		else if (lower.contains("combat bracelet"))
+		{
+			addChargedTravel(lines, "Combat bracelet");
+		}
+		else if (lower.contains("amulet of glory"))
+		{
+			addChargedTravel(lines, "Amulet of glory");
+		}
+		else if (lower.contains("burning amulet"))
+		{
+			addChargedTravel(lines, "Burning amulet");
+		}
+		else if (lower.contains("digsite pendant"))
+		{
+			addChargedTravel(lines, "Digsite pendant");
+		}
+		else if (lower.contains("necklace of passage"))
+		{
+			addChargedTravel(lines, "Necklace of passage");
 		}
 		else if (lower.contains("xeric's talisman"))
 		{
@@ -476,22 +511,32 @@ public class SupplyPlanner
 
 	private void addTravel(Map<String, MutableLine> lines, String name)
 	{
-		int[] ids = resolve(name);
-		if (ids.length == 0)
-		{
-			ids = explicitIds(name);
-		}
-		add(lines, SupplyGroup.TRAVEL, name, 1, ids, false);
+		addTravelUse(lines, name, resolve(name));
 	}
 
 	private void addChargedTravel(Map<String, MutableLine> lines, String name)
 	{
-		int[] ids = resolveCharged(name);
+		addTravelUse(lines, name, resolveCharged(name));
+	}
+
+	private void addTravelUse(Map<String, MutableLine> lines, String name, int[] ids)
+	{
 		if (ids.length == 0)
 		{
 			ids = explicitIds(name);
 		}
-		add(lines, SupplyGroup.TRAVEL, name, 1, ids, false);
+		if (ids.length == 0)
+		{
+			return;
+		}
+		String key = SupplyGroup.TRAVEL + ":" + name;
+		MutableLine line = lines.get(key);
+		if (line == null)
+		{
+			line = new MutableLine(SupplyGroup.TRAVEL, name, 1, ids, equipmentSlot(name), false);
+			lines.put(key, line);
+		}
+		line.uses++;
 	}
 
 	private static int[] explicitIds(String name)
@@ -696,38 +741,10 @@ public class SupplyPlanner
 		return runes;
 	}
 
-	private static boolean subtractPouch(Map<String, Integer> needs, Map<String, Integer> pouch)
+	private boolean subtractPouch(Map<String, Integer> needs, Map<String, Integer> pouch)
 	{
-		boolean used = false;
-		for (String[] combo : COMBINATION_RUNES)
-		{
-			int quantity = pouch.getOrDefault(combo[0], 0);
-			if (quantity <= 0)
-			{
-				continue;
-			}
-			int first = needs.getOrDefault(combo[1], 0);
-			if (combo.length > 2)
-			{
-				int second = needs.getOrDefault(combo[2], 0);
-				int cover = Math.min(quantity, Math.min(first, second));
-				if (cover > 0)
-				{
-					needs.put(combo[1], first - cover);
-					needs.put(combo[2], second - cover);
-					used = true;
-				}
-			}
-			else
-			{
-				int cover = Math.min(quantity, first);
-				if (cover > 0)
-				{
-					needs.put(combo[1], first - cover);
-					used = true;
-				}
-			}
-		}
+		Map<String, Integer> available = new LinkedHashMap<>(pouch);
+		boolean used = consumeCombinations(needs, available, null, false);
 		for (Map.Entry<String, Integer> entry : pouch.entrySet())
 		{
 			if (isCombination(entry.getKey()))
@@ -748,67 +765,98 @@ public class SupplyPlanner
 	private void useCombinationRunes(Map<String, MutableLine> lines, Map<String, Integer> needs,
 		ItemContainer bank, ItemContainer inventory, ItemContainer worn)
 	{
-		String[] names = {"Mist rune", "Dust rune", "Mud rune", "Smoke rune", "Steam rune", "Lava rune"};
-		String[][] pairs = {
-			{"Air rune", "Water rune"}, {"Air rune", "Earth rune"},
-			{"Water rune", "Earth rune"}, {"Air rune", "Fire rune"},
-			{"Water rune", "Fire rune"}, {"Earth rune", "Fire rune"}
-		};
-		int[] available = new int[names.length];
-		for (int i = 0; i < names.length; i++)
+		Map<String, Integer> available = new LinkedHashMap<>();
+		for (String[] combo : COMBINATION_RUNES)
 		{
-			int[] ids = resolve(names[i]);
-			available[i] = count(bank, ids) + count(inventory, ids) + count(worn, ids);
+			int[] ids = resolve(combo[0]);
+			int count = count(bank, ids) + count(inventory, ids) + count(worn, ids);
+			if (count > 0)
+			{
+				available.put(combo[0], count);
+			}
 		}
+		consumeCombinations(needs, available, lines, true);
+	}
 
+	/**
+	 * Consumes combination runes from {@code available}. A two-element combination first covers a
+	 * pair when both elements are needed; otherwise it can still cover one needed element, since
+	 * either component may be used. This is what lets a pouch's lava/mist runes cover a spell that
+	 * only needs one of their elements.
+	 */
+	private boolean consumeCombinations(Map<String, Integer> needs,
+		Map<String, Integer> available, Map<String, MutableLine> lines, boolean addLines)
+	{
+		boolean used = false;
 		boolean progress = true;
 		while (progress)
 		{
 			progress = false;
 			int best = -1;
 			int bestCover = 0;
-			for (int i = 0; i < names.length; i++)
+			boolean bestBoth = false;
+			for (int i = 0; i < COMBINATION_RUNES.length; i++)
 			{
-				int first = needs.getOrDefault(pairs[i][0], 0);
-				int second = needs.getOrDefault(pairs[i][1], 0);
-				int cover = Math.min(Math.min(first, second), available[i]);
-				if (cover > bestCover)
+				String name = COMBINATION_RUNES[i][0];
+				int quantity = available.getOrDefault(name, 0);
+				if (quantity <= 0)
 				{
-					bestCover = cover;
+					continue;
+				}
+				String first = COMBINATION_RUNES[i][1];
+				int needFirst = needs.getOrDefault(first, 0);
+				if (COMBINATION_RUNES[i].length == 2)
+				{
+					int cover = Math.min(quantity, needFirst);
+					if (cover > bestCover)
+					{
+						best = i;
+						bestCover = cover;
+						bestBoth = false;
+					}
+					continue;
+				}
+				String second = COMBINATION_RUNES[i][2];
+				int needSecond = needs.getOrDefault(second, 0);
+				int both = Math.min(quantity, Math.min(needFirst, needSecond));
+				int single = (needFirst > 0 ^ needSecond > 0)
+					? Math.min(quantity, Math.max(needFirst, needSecond)) : 0;
+				if (both > 0)
+				{
+					if (both > bestCover || !bestBoth)
+					{
+						best = i;
+						bestCover = both;
+						bestBoth = true;
+					}
+				}
+				else if (!bestBoth && single > bestCover)
+				{
 					best = i;
+					bestCover = single;
+					bestBoth = false;
 				}
 			}
 			if (best >= 0)
 			{
-				needs.put(pairs[best][0], needs.getOrDefault(pairs[best][0], 0) - bestCover);
-				needs.put(pairs[best][1], needs.getOrDefault(pairs[best][1], 0) - bestCover);
-				available[best] -= bestCover;
-				addRuneLine(lines, names[best], bestCover);
+				String name = COMBINATION_RUNES[best][0];
+				String first = COMBINATION_RUNES[best][1];
+				needs.put(first, needs.getOrDefault(first, 0) - bestCover);
+				if (bestBoth)
+				{
+					String second = COMBINATION_RUNES[best][2];
+					needs.put(second, needs.getOrDefault(second, 0) - bestCover);
+				}
+				available.put(name, available.getOrDefault(name, 0) - bestCover);
+				if (addLines)
+				{
+					addRuneLine(lines, name, bestCover);
+				}
+				used = true;
 				progress = true;
 			}
 		}
-
-		useSingleCombination(lines, needs, "Sunfire rune", "Fire rune", bank, inventory, worn);
-		useSingleCombination(lines, needs, "Aether rune", "Soul rune", bank, inventory, worn);
-	}
-
-	private void useSingleCombination(Map<String, MutableLine> lines, Map<String, Integer> needs,
-		String combination, String base, ItemContainer bank, ItemContainer inventory,
-		ItemContainer worn)
-	{
-		int need = needs.getOrDefault(base, 0);
-		if (need <= 0)
-		{
-			return;
-		}
-		int[] ids = resolve(combination);
-		int available = count(bank, ids) + count(inventory, ids) + count(worn, ids);
-		int cover = Math.min(need, available);
-		if (cover > 0)
-		{
-			needs.put(base, need - cover);
-			addRuneLine(lines, combination, cover);
-		}
+		return used;
 	}
 
 	private static boolean isCombination(String name)
@@ -956,6 +1004,113 @@ public class SupplyPlanner
 		}
 	}
 
+	private int travelNeed(MutableLine line, ItemContainer bank, ItemContainer inventory,
+		ItemContainer worn)
+	{
+		int capacity = capacityFor(line.name);
+		if (capacity > 1)
+		{
+			int owned = bestOwnedCapacity(line.itemIds, bank, inventory, worn);
+			if (owned > 0)
+			{
+				capacity = owned;
+			}
+		}
+		if (capacity <= 0)
+		{
+			return 1;
+		}
+		return Math.max(1, (line.uses + capacity - 1) / capacity);
+	}
+
+	/** Uses per item; 0 means reusable, 1 means one use per item. */
+	private static int capacityFor(String name)
+	{
+		switch (name)
+		{
+			case "Pendant of ates":
+			case "Xeric's talisman":
+			case "Ardougne cloak":
+			case "Explorer's ring":
+			case "Farming cape":
+			case "Eternal teleport crystal":
+			case "Royal seed pod":
+			case "Ectophial":
+				return 0;
+			case "Ring of wealth":
+				return 5;
+			case "Skills necklace":
+				return 6;
+			case "Slayer ring":
+			case "Ring of dueling":
+			case "Games necklace":
+				return 8;
+			case "Combat bracelet":
+			case "Amulet of glory":
+				return 6;
+			case "Burning amulet":
+			case "Digsite pendant":
+			case "Necklace of passage":
+			case "Teleport crystal":
+			case "Crystal teleport seed":
+			case "Quetzal whistle":
+				return 5;
+			default:
+				return 1;
+		}
+	}
+
+	private int bestOwnedCapacity(int[] itemIds, ItemContainer bank, ItemContainer inventory,
+		ItemContainer worn)
+	{
+		int best = 0;
+		for (int id : itemIds)
+		{
+			if (count(bank, id) + count(inventory, id) + count(worn, id) <= 0)
+			{
+				continue;
+			}
+			String itemName = itemManager.getItemComposition(id).getName();
+			String lower = itemName.toLowerCase(Locale.ROOT);
+			int charges = chargeValue(itemName);
+			if (charges > 0)
+			{
+				best = Math.max(best, charges);
+			}
+			else if (lower.contains("perfected quetzal"))
+			{
+				best = Math.max(best, 15);
+			}
+			else if (lower.contains("enhanced quetzal"))
+			{
+				best = Math.max(best, 10);
+			}
+			else if (lower.contains("basic quetzal"))
+			{
+				best = Math.max(best, 5);
+			}
+		}
+		return best;
+	}
+
+	private static int chargeValue(String itemName)
+	{
+		int open = itemName.lastIndexOf('(');
+		int close = itemName.lastIndexOf(')');
+		if (open < 0 || close <= open + 1)
+		{
+			return 0;
+		}
+		try
+		{
+			return Integer.parseInt(itemName.substring(open + 1, close).trim());
+		}
+		catch (NumberFormatException e)
+		{
+			return 0;
+		}
+	}
+
 	private static String equipmentSlot(String name)
 	{
 		switch (name)
@@ -968,11 +1123,19 @@ public class SupplyPlanner
 			case "Explorer's ring":
 			case "Ring of wealth":
 			case "Slayer ring":
+			case "Ring of dueling":
 				return "ring";
 			case "Skills necklace":
 			case "Xeric's talisman":
 			case "Pendant of ates":
+			case "Games necklace":
+			case "Amulet of glory":
+			case "Burning amulet":
+			case "Digsite pendant":
+			case "Necklace of passage":
 				return "neck";
+			case "Combat bracelet":
+				return "hands";
 			default:
 				return null;
 		}
@@ -1002,6 +1165,7 @@ public class SupplyPlanner
 		private final SupplyGroup group;
 		private final String name;
 		private int need;
+		private int uses;
 		private final int[] itemIds;
 		private final String equipmentSlot;
 		private final boolean noted;

@@ -43,6 +43,7 @@ public class RunSession
 		EnumSet.allOf(PatchType.class));
 	private volatile int index;
 	private volatile boolean active;
+	private volatile boolean routeReady;
 	private WorldPoint lastTarget;
 
 	@Inject
@@ -85,17 +86,22 @@ public class RunSession
 
 	public List<String> teleportsFor(int stopIndex)
 	{
-		return shortestPath.transportsFor(stopIndex);
+		return routeReady ? shortestPath.transportsFor(stopIndex) : Collections.emptyList();
 	}
 
 	public boolean hasShortestPathResult(int stopIndex)
 	{
-		return shortestPath.hasResult(stopIndex);
+		return routeReady && shortestPath.hasResult(stopIndex);
 	}
 
 	public boolean reachedShortestPath(int stopIndex)
 	{
-		return shortestPath.reached(stopIndex);
+		return routeReady && shortestPath.reached(stopIndex);
+	}
+
+	public boolean routeReady()
+	{
+		return routeReady;
 	}
 
 	public List<String> allTeleportLines()
@@ -134,6 +140,11 @@ public class RunSession
 	/** Recompute the current leg after the bank closes, using the supplies now carried. */
 	public void refreshRouteForInventory()
 	{
+		if (!active)
+		{
+			return;
+		}
+		routeReady = true;
 		requeryCurrentStop();
 	}
 
@@ -149,9 +160,12 @@ public class RunSession
 			{
 				return;
 			}
-			shortestPath.applyInventoryAndBank();
+			shortestPath.applyTeleportMode(!routeReady);
 			shortestPath.clearResults();
-			sendCurrentTarget(false);
+			if (routeReady)
+			{
+				sendCurrentTarget(false);
+			}
 			WorldPoint start;
 			if (index == 0)
 			{
@@ -256,15 +270,15 @@ public class RunSession
 		route = Collections.unmodifiableList(RoutePlanner.plan(patches, startX, startY));
 		index = 0;
 		active = true;
+		routeReady = false;
 		message("Route started: " + route.size() + " stops.");
+		message("Withdraw the bank tab supplies, then close the bank.");
 
 		int plane = player != null && player.getWorldLocation() != null
 			? player.getWorldLocation().getPlane() : 0;
 		WorldPoint legStart = new WorldPoint(startX, startY, plane);
 		shortestPath.clearResults();
-		shortestPath.applyInventoryAndBank();
-		// Set the displayed path first: Shortest Path cancels queued queries on a new path.
-		sendCurrentTarget();
+		shortestPath.applyTeleportMode(true);
 		queryStops(0, legStart);
 	}
 
@@ -283,6 +297,7 @@ public class RunSession
 	{
 		boolean wasActive = active;
 		active = false;
+		routeReady = false;
 		route = Collections.emptyList();
 		index = 0;
 		shortestPath.clearResults();
@@ -296,6 +311,7 @@ public class RunSession
 	private void finish()
 	{
 		active = false;
+		routeReady = false;
 		route = Collections.emptyList();
 		index = 0;
 		shortestPath.clearResults();

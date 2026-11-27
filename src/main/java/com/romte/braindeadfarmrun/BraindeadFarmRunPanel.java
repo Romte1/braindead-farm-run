@@ -290,6 +290,10 @@ class BraindeadFarmRunPanel extends PluginPanel
 		List<PatchDefinition> stops = session.stops();
 		int current = session.currentIndex();
 		StringBuilder text = new StringBuilder();
+		if (!session.routeReady())
+		{
+			text.append("Withdraw the bank tab supplies, then close the bank.\n\n");
+		}
 		for (int i = 0; i < stops.size(); i++)
 		{
 			PatchDefinition stop = stops.get(i);
@@ -297,7 +301,11 @@ class BraindeadFarmRunPanel extends PluginPanel
 			text.append(prefix).append(i + 1).append(". ").append(stop.getDisplayName()).append('\n');
 
 			List<String> teleports = session.teleportsFor(i);
-			if (!session.hasShortestPathResult(i))
+			if (!session.routeReady())
+			{
+				text.append("     Withdraw supplies first\n");
+			}
+			else if (!session.hasShortestPathResult(i))
 			{
 				text.append("     Shortest Path: calculating...\n");
 			}

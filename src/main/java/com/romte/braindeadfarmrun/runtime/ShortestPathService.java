@@ -50,18 +50,20 @@ public class ShortestPathService
 	}
 
 	/**
-	 * Ask Shortest Path to consider teleport items from the bank and inventory for this run, and
-	 * block the tablets of spells the player can cast on their current spellbook so the route
+	 * Ask Shortest Path to consider teleport items from the inventory (and optionally the bank),
+	 * and block the tablets of spells the player can cast on their current spellbook so the route
 	 * uses runes instead. Sending only the config override applies it without a displayed path.
 	 */
-	public void applyInventoryAndBank()
+	public void applyTeleportMode(boolean includeBank)
 	{
 		Map<String, Object> data = new HashMap<>();
 		Map<String, Object> overrides = new HashMap<>();
-		overrides.put("useTeleportationItems", "INVENTORY_AND_BANK");
+		overrides.put("useTeleportationItems",
+			includeBank ? "INVENTORY_AND_BANK" : "INVENTORY");
+		overrides.put("includeBankPath", false);
 		String blocked = blockedTabletsForSpellbook();
-		log.debug("Shortest Path spellbook={} blockedTablets={}",
-			client.getVarbitValue(VarbitID.SPELLBOOK), blocked);
+		log.debug("Shortest Path spellbook={} includeBank={} blockedTablets={}",
+			client.getVarbitValue(VarbitID.SPELLBOOK), includeBank, blocked);
 		if (!blocked.isEmpty())
 		{
 			String existing = configManager.getConfiguration(NAMESPACE, "blockedTeleportItems");
