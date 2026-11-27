@@ -1,5 +1,6 @@
 package com.romte.braindeadfarmrun.bank;
 
+import com.romte.braindeadfarmrun.BraindeadFarmRunConfig;
 import com.romte.braindeadfarmrun.data.Patches;
 import com.romte.braindeadfarmrun.domain.patch.Crop;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
@@ -14,6 +15,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.ItemContainer;
+import net.runelite.api.Quest;
+import net.runelite.api.QuestState;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.client.game.ItemManager;
@@ -21,7 +24,7 @@ import net.runelite.http.api.item.ItemPrice;
 
 /**
  * Builds the list of items needed for the selected run types: tools, seeds/saplings, payments
- * and the bottomless compost bucket. Counts are compared against the bank, inventory and worn
+ * and the best compost choice. Counts are compared against the bank, inventory and worn
  * equipment.
  */
 @Singleton
@@ -29,16 +32,22 @@ public class SupplyPlanner
 {
 	private final Client client;
 	private final ItemManager itemManager;
+	private final BraindeadFarmRunConfig config;
 
 	@Inject
-	SupplyPlanner(Client client, ItemManager itemManager)
+	SupplyPlanner(Client client, ItemManager itemManager, BraindeadFarmRunConfig config)
 	{
 		this.client = client;
 		this.itemManager = itemManager;
+		this.config = config;
 	}
 
 	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states)
 	{
+		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
+
 		Map<String, MutableLine> lines = new LinkedHashMap<>();
 
 		boolean herbs = types.contains(PatchType.HERB);
@@ -57,10 +66,14 @@ public class SupplyPlanner
 		}
 		if (trees || fruitTrees)
 		{
-			add(lines, SupplyGroup.TOOLS, "Secateurs", 1, new int[]{ItemID.SECATEURS}, false);
+			boolean magicSecateurs = Quest.FAIRYTALE_I__GROWING_PAINS.getState(client)
+				== QuestState.FINISHED;
+			add(lines, SupplyGroup.TOOLS,
+				magicSecateurs ? "Magic secateurs" : "Secateurs", 1,
+				new int[]{magicSecateurs ? ItemID.FAIRY_ENCHANTED_SECATEURS : ItemID.SECATEURS},
+				false);
 		}
-		add(lines, SupplyGroup.TOOLS, "Bottomless compost bucket", 1,
-			new int[]{ItemID.BOTTOMLESS_COMPOST_BUCKET}, false);
+		addCompost(lines, bank, inventory, worn);
 
 		for (PatchType type : types)
 		{
@@ -82,10 +95,6 @@ public class SupplyPlanner
 			}
 		}
 
-		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
-		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
-
 		List<BankSupplyLine> result = new ArrayList<>();
 		for (MutableLine line : lines.values())
 		{
@@ -100,12 +109,49 @@ public class SupplyPlanner
 		return result;
 	}
 
+	private void addCompost(Map<String, MutableLine> lines, ItemContainer bank,
+		ItemContainer inventory, ItemContainer worn)
+	{
+		if (config.bottomlessCompostBucket())
+		{
+			add(lines, SupplyGroup.TOOLS, "Bottomless compost bucket", 1,
+				new int[]{ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED}, false);
+			return;
+		}
+
+		int[] itemIds = {
+			ItemID.BUCKET_ULTRACOMPOST,
+			ItemID.BUCKET_SUPERCOMPOST,
+			ItemID.BUCKET_COMPOST
+		};
+		String[] names = {"Ultracompost", "Supercompost", "Compost"};
+		int chosen = 0;
+		for (int i = 0; i < itemIds.length; i++)
+		{
+			if (count(bank, itemIds[i]) + count(inventory, itemIds[i])
+				+ count(worn, itemIds[i]) > 0)
+			{
+				chosen = i;
+				break;
+			}
+		}
+		add(lines, SupplyGroup.TOOLS, names[chosen], 1, new int[]{itemIds[chosen]}, false);
+	}
+
 	private int[] resolve(String name)
 	{
 		List<ItemPrice> prices = itemManager.search(name);
 		if (prices == null || prices.isEmpty())
 		{
 			return new int[0];
+		}
+		int[] unnoted = prices.stream()
+			.mapToInt(ItemPrice::getId)
+			.filter(id -> itemManager.getItemComposition(id).getNote() == 0)
+			.toArray();
+		if (unnoted.length > 0)
+		{
+			return unnoted;
 		}
 		return prices.stream().mapToInt(ItemPrice::getId).toArray();
 	}
@@ -141,6 +187,11 @@ public class SupplyPlanner
 			total += container.count(itemId);
 		}
 		return total;
+	}
+
+	private static int count(ItemContainer container, int itemId)
+	{
+		return container == null ? 0 : container.count(itemId);
 	}
 
 	private static final class MutableLine

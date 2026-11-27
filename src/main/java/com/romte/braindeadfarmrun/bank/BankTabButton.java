@@ -5,6 +5,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.ScriptEvent;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.gameval.InterfaceID;
@@ -36,8 +37,6 @@ class BankTabButton
 	private static final int TAB_BUTTON_ACTIVE = 196;
 	private static final int SEARCH_SPRITE = 170;
 	private static final int SOUND_TAB = 2266;
-	/** RuneLite's WidgetType has no ITEM constant; item widgets are raw type 2. */
-	private static final int WIDGET_TYPE_ITEM = 2;
 
 	private final Client client;
 	private final ClientThread clientThread;
@@ -69,7 +68,7 @@ class BankTabButton
 			return; // already built for the bank that is open
 		}
 		background = createGraphic(parent, NAME, TAB_BUTTON, BUTTON_SIZE, BUTTON_X, BUTTON_Y);
-		icon = createItem(parent, NAME, ItemID.BOTTOMLESS_COMPOST_BUCKET, BUTTON_SIZE - 6,
+		icon = createModel(parent, NAME, ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED, BUTTON_SIZE - 6,
 			BUTTON_X + 3, BUTTON_Y + 3);
 		for (Widget part : new Widget[]{background, icon})
 		{
@@ -282,16 +281,19 @@ class BankTabButton
 		return widget;
 	}
 
-	private static Widget createItem(Widget parent, String name, int itemId, int size, int x, int y)
+	private Widget createModel(Widget parent, String name, int itemId, int size, int x, int y)
 	{
-		Widget widget = parent.createChild(-1, WIDGET_TYPE_ITEM);
+		ItemComposition definition = client.getItemDefinition(itemId);
+		Widget widget = parent.createChild(-1, WidgetType.MODEL);
 		widget.setOriginalWidth(size);
 		widget.setOriginalHeight(size);
 		widget.setOriginalX(x);
 		widget.setOriginalY(y);
-		widget.setItemId(itemId);
-		widget.setItemQuantity(0);
-		widget.setItemQuantityMode(0);
+		widget.setModelId(definition.getInventoryModel());
+		widget.setModelZoom(1600);
+		widget.setRotationX(0);
+		widget.setRotationY(0);
+		widget.setRotationZ(0);
 		widget.setHasListener(true);
 		widget.setName(name);
 		widget.revalidate();

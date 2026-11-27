@@ -29,9 +29,27 @@ public interface BraindeadFarmRunConfig extends Config
 	}
 
 	@ConfigSection(
+		name = "Bank",
+		description = "What the bank supply tab uses",
+		position = 1
+	)
+	String bankSection = "bank";
+
+	@ConfigItem(
+		keyName = "bottomlessCompostBucket",
+		name = "Bottomless compost bucket",
+		description = "Use the filled bottomless compost bucket. If disabled, the tab uses the best compost available in your bank (ultracompost, supercompost or compost)",
+		section = bankSection
+	)
+	default boolean bottomlessCompostBucket()
+	{
+		return true;
+	}
+
+	@ConfigSection(
 		name = "Advanced",
 		description = "Diagnostics and troubleshooting",
-		position = 1
+		position = 2
 	)
 	String advancedSection = "advanced";
 

@@ -87,6 +87,7 @@ public class BankTab
 	private int originalContainerChildren = -1;
 	private volatile Supplier<List<BankSupplyLine>> plan = Collections::emptyList;
 	private volatile boolean enabled;
+	private volatile boolean runActive;
 
 	@Inject
 	BankTab(Client client, ClientThread clientThread, ChatMessageManager chatMessageManager,
@@ -110,7 +111,29 @@ public class BankTab
 
 	public boolean isTabOpen()
 	{
-		return button.isActive() && button.isBankOpen();
+		return runActive && button.isActive() && button.isBankOpen();
+	}
+
+	/** The bank tab button only exists while a run is active. */
+	public void setRunActive(boolean active)
+	{
+		if (runActive == active)
+		{
+			return;
+		}
+		runActive = active;
+		clientThread.invokeLater(() ->
+		{
+			if (!runActive)
+			{
+				button.destroy();
+				removeAddedWidgets();
+			}
+			else if (enabled)
+			{
+				button.init();
+			}
+		});
 	}
 
 	public void onGameTick()
@@ -148,7 +171,10 @@ public class BankTab
 		}
 		if (enabled)
 		{
-			button.init();
+			if (runActive)
+			{
+				button.init();
+			}
 		}
 		else
 		{
@@ -161,7 +187,14 @@ public class BankTab
 	{
 		if (enabled && event.getGroupId() == InterfaceID.BANKMAIN)
 		{
-			button.reload();
+			if (runActive)
+			{
+				button.reload();
+			}
+			else
+			{
+				button.destroy();
+			}
 		}
 	}
 
@@ -204,6 +237,11 @@ public class BankTab
 		{
 			return;
 		}
+		if (!runActive)
+		{
+			removeAddedWidgets();
+			return;
+		}
 		if (enabled)
 		{
 			// The bank's title bar is only ready once building finishes, so retry here in case
@@ -231,6 +269,10 @@ public class BankTab
 
 	public void onMenuOptionClicked(MenuOptionClicked event)
 	{
+		if (!runActive)
+		{
+			return;
+		}
 		button.onMenuOptionClicked(event);
 		if (event.getParam1() != InterfaceID.Bankmain.ITEMS || !button.isActive())
 		{
@@ -261,7 +303,7 @@ public class BankTab
 
 	public void refresh()
 	{
-		if (!button.isActive())
+		if (!runActive || !button.isActive())
 		{
 			return;
 		}

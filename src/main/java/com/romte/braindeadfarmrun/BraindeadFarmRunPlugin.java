@@ -99,6 +99,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		bankTab.setRunActive(runSession.isActive());
 		bankTab.onGameTick();
 		if (panel != null && ++panelTicks % 5 == 0)
 		{
