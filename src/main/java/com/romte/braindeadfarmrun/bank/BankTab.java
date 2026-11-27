@@ -99,6 +99,7 @@ public class BankTab
 	private volatile boolean buttonUnlocked;
 	private volatile boolean enabled;
 	private volatile boolean runActive;
+	private volatile boolean bankKnown;
 	private boolean layingOut;
 	private boolean planComputing;
 	private boolean scrollUpdateQueued;
@@ -126,6 +127,16 @@ public class BankTab
 	public boolean isBankOpen()
 	{
 		return button.isBankOpen();
+	}
+
+	public boolean isBankKnown()
+	{
+		return bankKnown;
+	}
+
+	public void resetBankKnown()
+	{
+		bankKnown = false;
 	}
 
 	public boolean isTabOpen()
@@ -241,8 +252,13 @@ public class BankTab
 
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
-		if (enabled && event.getGroupId() == InterfaceID.BANKMAIN)
+		if (event.getGroupId() == InterfaceID.BANKMAIN)
 		{
+			bankKnown = true;
+			if (!enabled)
+			{
+				return;
+			}
 			lastScrollHeight = -1;
 			lastScroll = -1;
 			addedWidgets.clear();

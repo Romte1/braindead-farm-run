@@ -106,7 +106,8 @@ public class BraindeadFarmRunPlugin extends Plugin
 		overlayManager.add(infoOverlay);
 		clientThread.invokeLater(supplyPlanner::refreshQuestState);
 
-		panel = new BraindeadFarmRunPanel(runSession, config, configManager);
+		panel = new BraindeadFarmRunPanel(runSession, config, configManager,
+			bankTab::isBankKnown);
 		navButton = NavigationButton.builder()
 			.tooltip("Braindead Farm Run")
 			.icon(createIcon())
@@ -187,6 +188,11 @@ public class BraindeadFarmRunPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		if (event.getGameState() == GameState.LOGGED_IN
+			|| event.getGameState() == GameState.LOGIN_SCREEN)
+		{
+			bankTab.resetBankKnown();
+		}
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
 			questTicks = 0;

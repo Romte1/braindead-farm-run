@@ -581,6 +581,18 @@ public class SupplyPlanner
 		{
 			return cached;
 		}
+		if ("Slayer ring".equalsIgnoreCase(name))
+		{
+			// Slayer rings are untradeable, so itemManager.search() can return nothing for
+			// them. Include every charged variant and the eternal ring explicitly.
+			int[] rings = {
+				ItemID.SLAYER_RING_8, ItemID.SLAYER_RING_7, ItemID.SLAYER_RING_6,
+				ItemID.SLAYER_RING_5, ItemID.SLAYER_RING_4, ItemID.SLAYER_RING_3,
+				ItemID.SLAYER_RING_2, ItemID.SLAYER_RING_1, ItemID.SLAYER_RING_ETERNAL
+			};
+			chargedCache.put(name, rings);
+			return rings;
+		}
 		List<ItemPrice> prices = itemManager.search(name);
 		if (prices == null || prices.isEmpty())
 		{
@@ -635,13 +647,6 @@ public class SupplyPlanner
 		if (hasNumberedVariants)
 		{
 			charged.removeIf(id -> !hasChargeSuffix(itemManager.getItemComposition(id).getName()));
-		}
-		if ("Slayer ring".equalsIgnoreCase(name)
-			&& !charged.contains(ItemID.SLAYER_RING_ETERNAL))
-		{
-			// The eternal ring is a separate, better variant; it has no numeric charge
-			// suffix, so the numbered-variant filter above would otherwise drop it.
-			charged.add(ItemID.SLAYER_RING_ETERNAL);
 		}
 		if (charged.isEmpty())
 		{
