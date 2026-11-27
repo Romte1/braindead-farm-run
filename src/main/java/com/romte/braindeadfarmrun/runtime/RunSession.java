@@ -6,6 +6,7 @@ import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import com.romte.braindeadfarmrun.planning.RoutePlanner;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,8 @@ public class RunSession
 	private final ClientThread clientThread;
 	private final EventBus eventBus;
 	private volatile List<PatchDefinition> route = Collections.emptyList();
+	private volatile Set<PatchType> selectedTypes = Collections.unmodifiableSet(
+		EnumSet.allOf(PatchType.class));
 	private volatile int index;
 	private volatile boolean active;
 	private WorldPoint lastTarget;
@@ -50,7 +53,20 @@ public class RunSession
 
 	public void start(Set<PatchType> types)
 	{
+		setSelectedTypes(types);
 		clientThread.invokeLater(() -> startOnClientThread(types));
+	}
+
+	public void setSelectedTypes(Set<PatchType> types)
+	{
+		Set<PatchType> copy = types.isEmpty() ? EnumSet.noneOf(PatchType.class)
+			: EnumSet.copyOf(types);
+		selectedTypes = Collections.unmodifiableSet(copy);
+	}
+
+	public Set<PatchType> selectedTypes()
+	{
+		return selectedTypes;
 	}
 
 	public void stop()

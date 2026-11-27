@@ -52,6 +52,11 @@ class BraindeadFarmRunPanel extends PluginPanel
 		add(trees);
 		add(fruitTrees);
 		add(allotments);
+		herbs.addActionListener(event -> updateSelection());
+		trees.addActionListener(event -> updateSelection());
+		fruitTrees.addActionListener(event -> updateSelection());
+		allotments.addActionListener(event -> updateSelection());
+		updateSelection();
 		add(Box.createVerticalStrut(12));
 
 		status.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -78,6 +83,23 @@ class BraindeadFarmRunPanel extends PluginPanel
 			return;
 		}
 
+		Set<PatchType> types = selectedTypes();
+		if (types.isEmpty())
+		{
+			status.setText("Select at least one run type.");
+			return;
+		}
+		status.setText("Building route...");
+		session.start(types);
+	}
+
+	private void updateSelection()
+	{
+		session.setSelectedTypes(selectedTypes());
+	}
+
+	private Set<PatchType> selectedTypes()
+	{
 		Set<PatchType> types = EnumSet.noneOf(PatchType.class);
 		if (herbs.isSelected())
 		{
@@ -95,13 +117,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		{
 			types.add(PatchType.ALLOTMENT);
 		}
-		if (types.isEmpty())
-		{
-			status.setText("Select at least one run type.");
-			return;
-		}
-		status.setText("Building route...");
-		session.start(types);
+		return types;
 	}
 
 	void refresh()
