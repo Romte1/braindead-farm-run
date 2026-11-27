@@ -91,6 +91,7 @@ public class BankTab
 	private volatile Supplier<List<BankSupplyLine>> plan = Collections::emptyList;
 	private volatile boolean enabled;
 	private volatile boolean runActive;
+	private boolean layoutScheduled;
 
 	@Inject
 	BankTab(Client client, ClientThread clientThread, ChatMessageManager chatMessageManager,
@@ -255,23 +256,31 @@ public class BankTab
 			// the WidgetLoaded init ran too early.
 			button.init();
 		}
-		removeAddedWidgets();
-		if (!button.isActive())
+		if (!button.isActive() || layoutScheduled)
 		{
 			return;
 		}
-		Widget itemContainer = client.getWidget(InterfaceID.Bankmain.ITEMS);
-		if (itemContainer == null)
+		layoutScheduled = true;
+		clientThread.invokeLater(() ->
 		{
-			return;
-		}
-		Widget[] children = itemContainer.getChildren();
-		if (children != null && originalContainerChildren == -1)
-		{
-			originalContainerChildren = children.length;
-		}
-		Widget[] itemWidgets = itemContainer.getDynamicChildren();
-		layOut(itemContainer, itemWidgets, plan.get());
+			layoutScheduled = false;
+			if (!runActive || !button.isActive())
+			{
+				return;
+			}
+			Widget itemContainer = client.getWidget(InterfaceID.Bankmain.ITEMS);
+			if (itemContainer == null || itemContainer.isHidden())
+			{
+				return;
+			}
+			Widget[] children = itemContainer.getChildren();
+			if (children != null && originalContainerChildren == -1)
+			{
+				originalContainerChildren = children.length;
+			}
+			removeAddedWidgets();
+			layOut(itemContainer, itemContainer.getDynamicChildren(), plan.get());
+		});
 	}
 
 	public void onMenuOptionClicked(MenuOptionClicked event)

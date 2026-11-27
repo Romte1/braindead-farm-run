@@ -111,15 +111,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 			BraindeadFarmRunConfig.GROUP, "bottomlessCompostBucket", bottomless.isSelected()));
 		add(bottomless);
 
-		JLabel hint = new JLabel(
-			"<html><body style='width: 170px'>The bank tab appears while a run is active.</body></html>");
-		hint.setForeground(MUTED);
-		hint.setAlignmentX(Component.LEFT_ALIGNMENT);
-		hint.setBorder(BorderFactory.createEmptyBorder(6, 8, 0, 0));
-		add(hint);
-
-		refresh();
-	}
+		refresh();	}
 
 	private static JCheckBox checkbox(String text, boolean selected)
 	{

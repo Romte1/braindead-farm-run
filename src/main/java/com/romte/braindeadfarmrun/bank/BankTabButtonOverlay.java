@@ -19,6 +19,7 @@ class BankTabButtonOverlay extends Overlay
 {
 	private final BankTabButton button;
 	private final ItemManager itemManager;
+	private BufferedImage icon;
 
 	@Inject
 	BankTabButtonOverlay(BankTabButton button, ItemManager itemManager)
@@ -37,8 +38,13 @@ class BankTabButtonOverlay extends Overlay
 		{
 			return null;
 		}
-		BufferedImage image = itemManager.getImage(ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
+		BufferedImage image = icon;
 		if (image == null)
+		{
+			image = itemManager.getImage(ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED);
+			icon = image;
+		}
+		if (image == null || image.getWidth() <= 0)
 		{
 			return null;
 		}
