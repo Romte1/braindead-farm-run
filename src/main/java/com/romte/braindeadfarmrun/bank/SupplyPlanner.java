@@ -657,7 +657,8 @@ public class SupplyPlanner
 			{
 				String name = pouchName(pouchId);
 				add(lines, SupplyGroup.TOOLS, name, 1, new int[]{pouchId}, false);
-				setDetails(lines, SupplyGroup.TOOLS, name, pouchDetails(pouch));
+				setDetails(lines, SupplyGroup.TOOLS, name,
+					pouchDetails(pouch, allNeedsMet(runeNeeds)));
 			}
 		}
 		useCombinationRunes(lines, runeNeeds, bank, inventory, worn);
@@ -839,7 +840,19 @@ public class SupplyPlanner
 		return itemId == ItemID.BH_RUNE_POUCH ? "Rune pouch" : "Divine rune pouch";
 	}
 
-	private static String pouchDetails(Map<String, Integer> pouch)
+	private static boolean allNeedsMet(Map<String, Integer> needs)
+	{
+		for (int need : needs.values())
+		{
+			if (need > 0)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static String pouchDetails(Map<String, Integer> pouch, boolean complete)
 	{
 		StringBuilder details = new StringBuilder("Holds ");
 		boolean first = true;
@@ -852,7 +865,9 @@ public class SupplyPlanner
 			details.append(entry.getValue()).append(' ').append(entry.getKey());
 			first = false;
 		}
-		details.append("; covers the run's spell runes.");
+		details.append(complete
+			? "; covers the run's spell runes."
+			: "; covers part of the run's spell runes.");
 		return details.toString();
 	}
 
