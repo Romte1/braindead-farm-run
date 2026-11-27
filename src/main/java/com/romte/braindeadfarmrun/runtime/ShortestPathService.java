@@ -99,7 +99,8 @@ public class ShortestPathService
 		}
 		Object id = data.get("id");
 		Object resultTransports = data.get("transports");
-		if (!(id instanceof String) || !(resultTransports instanceof List))
+		if (!(id instanceof String) || !((String) id).startsWith(ID_PREFIX)
+			|| !(resultTransports instanceof List))
 		{
 			return;
 		}
