@@ -116,6 +116,21 @@ public class PatchTracker
 			Boolean.class));
 	}
 
+	/** Reads the live varbit for a patch, refreshing state that may have loaded before the scene. */
+	public void refresh(PatchDefinition patch)
+	{
+		if (patch == null)
+		{
+			return;
+		}
+		int value = client.getVarbitValue(patch.getVarbit());
+		PatchState previous = states.get(patch.getId());
+		PatchState next = PatchStateMapper.apply(patch.getId(),
+			PatchStates.get().decode(patch.getType(), value), previous, Instant.now());
+		states.put(patch.getId(), next);
+		dirty = true;
+	}
+
 	/** Nearest loaded object for a patch. Client thread only. */
 	public GameObject objectFor(PatchDefinition patch)
 	{

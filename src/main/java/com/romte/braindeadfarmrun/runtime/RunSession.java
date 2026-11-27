@@ -448,6 +448,8 @@ public class RunSession
 			&& distance(location.getX(), location.getY(), target.getX(), target.getY()) <= ARRIVAL_RADIUS)
 		{
 			atStop = true;
+			patchTracker.refresh(target);
+			beginStop();
 			message("At " + target.getDisplayName()
 				+ ". The next stop opens automatically when the steps are done.");
 		}

@@ -82,7 +82,6 @@ public class FarmRunWorldOverlay extends Overlay
 			if (farmer != null)
 			{
 				outlineRenderer.drawOutline(farmer, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
-				drawActionItem(graphics, farmer.getConvexHull(), farmer.getLocalLocation());
 				if (showArrow)
 				{
 					drawArrowOverNpc(graphics, farmer);

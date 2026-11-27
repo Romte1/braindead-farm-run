@@ -180,7 +180,7 @@ final class StopGuide
 				return initialCrop != null && initialCrop.needsPayment()
 					? initialCrop.getPaymentItem() : null;
 			case REMOVE:
-				return farmerRemoval ? "Coins" : "Spade";
+				return farmerRemoval ? null : "Spade";
 			default:
 				return null;
 		}
