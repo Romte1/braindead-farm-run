@@ -6,6 +6,7 @@ import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import com.romte.braindeadfarmrun.planning.RoutePlanner;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -514,6 +515,26 @@ public class RunSession
 		{
 			preparing = false;
 			message("No patches selected.");
+			return;
+		}
+
+		// Patches that are already growing have nothing to do on this run.
+		Map<String, PatchState> states = patchTracker.snapshot();
+		List<PatchDefinition> pending = new ArrayList<>();
+		for (PatchDefinition patch : patches)
+		{
+			PatchState state = states.get(patch.getId());
+			if (state != null && state.statusAt(Instant.now()) == PatchState.Status.GROWING)
+			{
+				continue;
+			}
+			pending.add(patch);
+		}
+		patches = pending;
+		if (patches.isEmpty())
+		{
+			preparing = false;
+			message("No patches need attention.");
 			return;
 		}
 
