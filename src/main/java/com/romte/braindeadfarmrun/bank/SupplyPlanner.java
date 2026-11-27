@@ -927,7 +927,7 @@ public class SupplyPlanner
 		return false;
 	}
 
-	private static int pouchItemId(ItemContainer bank, ItemContainer inventory, ItemContainer worn)
+	private int pouchItemId(ItemContainer bank, ItemContainer inventory, ItemContainer worn)
 	{
 		for (int id : RUNE_POUCH_IDS)
 		{
@@ -1203,7 +1203,7 @@ public class SupplyPlanner
 		}
 	}
 
-	private static int count(ItemContainer container, int[] itemIds)
+	private int count(ItemContainer container, int[] itemIds)
 	{
 		if (container == null)
 		{
@@ -1212,14 +1212,28 @@ public class SupplyPlanner
 		int total = 0;
 		for (int itemId : itemIds)
 		{
-			total += container.count(itemId);
+			total += count(container, itemId);
 		}
 		return total;
 	}
 
-	private static int count(ItemContainer container, int itemId)
+	private int count(ItemContainer container, int itemId)
 	{
-		return container == null ? 0 : container.count(itemId);
+		if (container == null)
+		{
+			return 0;
+		}
+		int total = container.count(itemId);
+		ItemComposition def = itemManager.getItemComposition(itemId);
+		if (def != null)
+		{
+			int noted = def.getLinkedNoteId();
+			if (noted > 0 && noted != itemId)
+			{
+				total += container.count(noted);
+			}
+		}
+		return total;
 	}
 
 	private static final class MutableLine

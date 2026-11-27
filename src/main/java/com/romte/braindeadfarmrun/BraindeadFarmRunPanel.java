@@ -238,6 +238,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		}
 		status.setText("Creating route...");
 		startButton.setEnabled(false);
+		setSetupEnabled(false);
 		startPreparingAnimation();
 		session.start(types);
 	}
@@ -282,10 +283,12 @@ class BraindeadFarmRunPanel extends PluginPanel
 			}
 			if (preparing)
 			{
+				setSetupEnabled(false);
 				startPreparingAnimation();
 			}
 			else
 			{
+				setSetupEnabled(true);
 				stopPreparingAnimation();
 				startButton.setEnabled(true);
 				startButton.setText("START RUN");
@@ -302,6 +305,15 @@ class BraindeadFarmRunPanel extends PluginPanel
 			}
 			wasRun = showRun;
 		});
+	}
+
+	private void setSetupEnabled(boolean enabled)
+	{
+		herbs.setEnabled(enabled);
+		trees.setEnabled(enabled);
+		fruitTrees.setEnabled(enabled);
+		allotments.setEnabled(enabled);
+		bottomless.setEnabled(enabled);
 	}
 
 	private void startPreparingAnimation()

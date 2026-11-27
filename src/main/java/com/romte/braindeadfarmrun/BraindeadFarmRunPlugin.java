@@ -150,6 +150,13 @@ public class BraindeadFarmRunPlugin extends Plugin
 		}
 		wasActive = active;
 		bankTab.setRunActive(active);
+		if (active && runSession.allResultsReady() && !bankTab.hasPlan())
+		{
+			// Results can arrive before setRunActive(true) is processed. Retry here so a
+			// fast stop/start cannot leave the panel stuck on CREATING ROUTE.
+			bankTab.invalidatePlan();
+			bankTab.refresh();
+		}
 		if (active && runSession.allResultsReady() && bankTab.hasPlan())
 		{
 			runSession.setPreparing(false);

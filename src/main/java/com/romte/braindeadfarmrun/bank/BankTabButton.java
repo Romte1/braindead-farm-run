@@ -66,8 +66,18 @@ class BankTabButton
 		{
 			return;
 		}
+		if (background != null && !background.isHidden() && isChildOf(parent, background))
+		{
+			if (active)
+			{
+				background.setSpriteId(TAB_BUTTON_ACTIVE);
+				background.revalidate();
+				clientThread.invokeLater(this::activate);
+			}
+			return;
+		}
 		// A bank rebuild can leave the old button hidden while still being a child of the
-		// universe. Always create a fresh button and hide the old one, like Quest Helper.
+		// universe. Replace it when that happens instead of reusing a dead widget.
 		if (background != null)
 		{
 			background.setHidden(true);
@@ -244,6 +254,22 @@ class BankTabButton
 	{
 		Widget bank = client.getWidget(InterfaceID.Bankmain.UNIVERSE);
 		return bank == null || bank.isHidden();
+	}
+
+	private static boolean isChildOf(Widget parent, Widget child)
+	{
+		if (parent == null || child == null || parent.getChildren() == null)
+		{
+			return false;
+		}
+		for (Widget candidate : parent.getChildren())
+		{
+			if (candidate == child)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static Widget createGraphic(Widget parent, String name, int spriteId, int size, int x, int y)

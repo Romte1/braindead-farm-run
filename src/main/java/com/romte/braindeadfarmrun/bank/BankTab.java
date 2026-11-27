@@ -452,6 +452,11 @@ public class BankTab
 			for (int id : line.itemIds)
 			{
 				planned.add(id);
+				int noted = notedId(id);
+				if (noted > 0)
+				{
+					planned.add(noted);
+				}
 			}
 		}
 		equipment.sort(Comparator.comparingInt(line -> groupRank(line.group)));
@@ -595,15 +600,25 @@ public class BankTab
 		int bestCount = -1;
 		for (int id : line.itemIds)
 		{
-			int count = bank.count(id);
+			int count = count(bank, id);
 			if (count <= 0)
 			{
 				continue;
 			}
+			int noted = notedId(id);
+			int display = id;
+			if (line.noted && noted > 0 && bank.count(noted) > 0)
+			{
+				display = noted;
+			}
+			else if (bank.count(id) <= 0 && noted > 0)
+			{
+				display = noted;
+			}
 			int score = variantScore(id);
 			if (score > bestScore || (score == bestScore && count > bestCount))
 			{
-				best = id;
+				best = display;
 				bestScore = score;
 				bestCount = count;
 			}
@@ -661,7 +676,7 @@ public class BankTab
 
 	private void drawItem(Widget widget, int itemId, ItemContainer bank, BankSupplyLine line)
 	{
-		int qty = bank.count(itemId);
+		int qty = count(bank, itemId);
 		// Planned rows show the amount to withdraw, not the whole bank stack; otherwise a
 		// 50k rune stack in the bank looks like a 50k requirement.
 		int shownQty = line == null ? qty : Math.min(qty, Math.max(1, line.need));
@@ -763,7 +778,7 @@ public class BankTab
 		return name.endsWith("rune") || name.contains(" rune");
 	}
 
-	private static int count(ItemContainer container, int[] itemIds)
+	private int count(ItemContainer container, int[] itemIds)
 	{
 		if (container == null)
 		{
@@ -772,9 +787,30 @@ public class BankTab
 		int total = 0;
 		for (int id : itemIds)
 		{
-			total += container.count(id);
+			total += count(container, id);
 		}
 		return total;
+	}
+
+	private int count(ItemContainer container, int itemId)
+	{
+		if (container == null)
+		{
+			return 0;
+		}
+		int total = container.count(itemId);
+		int noted = notedId(itemId);
+		if (noted > 0 && noted != itemId)
+		{
+			total += container.count(noted);
+		}
+		return total;
+	}
+
+	private int notedId(int itemId)
+	{
+		ItemComposition def = client.getItemDefinition(itemId);
+		return def == null ? -1 : def.getLinkedNoteId();
 	}
 
 	private PendingText neededText(Widget widget, BankSupplyLine line)
