@@ -18,8 +18,10 @@ import net.runelite.api.events.ScriptCallbackEvent;
 import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.events.ScriptPreFired;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.api.events.WidgetClosed;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.GameState;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -187,6 +189,17 @@ public class BraindeadFarmRunPlugin extends Plugin
 	public void onWidgetLoaded(WidgetLoaded event)
 	{
 		bankTab.onWidgetLoaded(event);
+	}
+
+	@Subscribe
+	public void onWidgetClosed(WidgetClosed event)
+	{
+		if (event.getGroupId() == InterfaceID.BANKMAIN)
+		{
+			// The player has had a chance to withdraw the tab's supplies; recompute the leg
+			// with the inventory they are actually leaving with.
+			runSession.refreshRouteForInventory();
+		}
 	}
 
 	@Subscribe

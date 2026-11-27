@@ -128,6 +128,17 @@ public class RunSession
 	/** Rebuild the route queries when the player changes spellbook during a run. */
 	public void refreshTeleportPreference()
 	{
+		requeryCurrentStop();
+	}
+
+	/** Recompute the current leg after the bank closes, using the supplies now carried. */
+	public void refreshRouteForInventory()
+	{
+		requeryCurrentStop();
+	}
+
+	private void requeryCurrentStop()
+	{
 		if (!active)
 		{
 			return;
@@ -140,7 +151,7 @@ public class RunSession
 			}
 			shortestPath.applyInventoryAndBank();
 			shortestPath.clearResults();
-			sendCurrentTarget();
+			sendCurrentTarget(false);
 			WorldPoint start;
 			if (index == 0)
 			{
@@ -299,6 +310,11 @@ public class RunSession
 
 	private void sendCurrentTarget()
 	{
+		sendCurrentTarget(true);
+	}
+
+	private void sendCurrentTarget(boolean announce)
+	{
 		List<PatchDefinition> current = route;
 		int currentIndex = index;
 		if (currentIndex >= current.size())
@@ -311,8 +327,11 @@ public class RunSession
 		data.put("target", point);
 		eventBus.post(new PluginMessage("shortestpath", "path", data));
 		lastTarget = point;
-		message("Next: " + target.getDisplayName() + " (" + (currentIndex + 1) + "/"
-			+ current.size() + ")");
+		if (announce)
+		{
+			message("Next: " + target.getDisplayName() + " (" + (currentIndex + 1) + "/"
+				+ current.size() + ")");
+		}
 	}
 
 	private void clearPath()
