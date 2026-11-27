@@ -170,6 +170,30 @@ public class SupplyPlanner
 		{
 			addTravel(lines, "Farming cape");
 		}
+		else if (lower.contains("royal seed pod"))
+		{
+			addTravel(lines, "Royal seed pod");
+		}
+		else if (lower.contains("ectophial"))
+		{
+			addTravel(lines, "Ectophial");
+		}
+		else if (lower.contains("icy basalt"))
+		{
+			addTravel(lines, "Icy basalt");
+		}
+		else if (lower.contains("stony basalt"))
+		{
+			addTravel(lines, "Stony basalt");
+		}
+		else if (lower.contains("teleport to house") || lower.contains("house teleport"))
+		{
+			addTravel(lines, "Teleport to house");
+		}
+		else if (lower.contains("crystal teleport seed"))
+		{
+			addTravel(lines, "Crystal teleport seed");
+		}
 		else if (lower.contains("teleport crystal"))
 		{
 			addTravel(lines, "Teleport crystal");
