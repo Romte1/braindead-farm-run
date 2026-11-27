@@ -9,6 +9,7 @@ import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
@@ -49,7 +50,8 @@ public class SupplyPlanner
 		magicSecateurs = Quest.FAIRYTALE_I__GROWING_PAINS.getState(client) == QuestState.FINISHED;
 	}
 
-	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states)
+	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states,
+		List<String> transports)
 	{		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
@@ -100,6 +102,11 @@ public class SupplyPlanner
 			}
 		}
 
+		for (String transport : transports)
+		{
+			addTransport(transport, lines);
+		}
+
 		List<BankSupplyLine> result = new ArrayList<>();
 		for (MutableLine line : lines.values())
 		{
@@ -114,10 +121,181 @@ public class SupplyPlanner
 		return result;
 	}
 
+	private void addTransport(String display, Map<String, MutableLine> lines)
+	{
+		String lower = display.toLowerCase(Locale.ROOT);
+		if (lower.contains("soul wars") || lower.contains("minigame")
+			|| lower.contains("fairy ring") || lower.contains("spirit tree")
+			|| lower.contains("tree gnome village") || lower.contains("walk")
+			|| lower.contains("gnome glider") || lower.contains("canoe")
+			|| lower.contains("charter") || lower.contains("boat")
+			|| lower.contains("magic carpet"))
+		{
+			return;
+		}
+
+		if (lower.contains("ardougne cloak"))
+		{
+			addTravel(lines, "Ardougne cloak");
+		}
+		else if (lower.contains("explorer's ring"))
+		{
+			addTravel(lines, "Explorer's ring");
+		}
+		else if (lower.contains("ring of wealth"))
+		{
+			addTravel(lines, "Ring of wealth");
+		}
+		else if (lower.contains("skills necklace"))
+		{
+			addTravel(lines, "Skills necklace");
+		}
+		else if (lower.contains("xeric's talisman"))
+		{
+			addTravel(lines, "Xeric's talisman");
+		}
+		else if (lower.contains("eternal teleport crystal"))
+		{
+			addTravel(lines, "Eternal teleport crystal");
+		}
+		else if (lower.contains("pendant of ates"))
+		{
+			addTravel(lines, "Pendant of ates");
+		}
+		else if (lower.contains("quetzal"))
+		{
+			addTravel(lines, "Quetzal whistle");
+		}
+		else if (lower.contains("farming cape"))
+		{
+			addTravel(lines, "Farming cape");
+		}
+		else if (lower.contains("teleport crystal"))
+		{
+			addTravel(lines, "Teleport crystal");
+		}
+		else if (lower.contains("civitas"))
+		{
+			addRunes(lines, 2, 0, 1, 1, 0);
+		}
+		else if (lower.contains("kourend"))
+		{
+			addRunes(lines, 2, 0, 0, 1, 1);
+		}
+		else if (lower.contains("varrock"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Varrock teleport");
+			}
+			else
+			{
+				addRunes(lines, 1, 3, 0, 1, 0);
+			}
+		}
+		else if (lower.contains("lumbridge"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Lumbridge teleport");
+			}
+			else
+			{
+				addRunes(lines, 1, 3, 1, 0, 0);
+			}
+		}
+		else if (lower.contains("falador"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Falador teleport");
+			}
+			else
+			{
+				addRunes(lines, 1, 3, 0, 0, 1);
+			}
+		}
+		else if (lower.contains("camelot"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Camelot teleport");
+			}
+			else
+			{
+				addRunes(lines, 1, 5, 0, 0, 0);
+			}
+		}
+		else if (lower.contains("ardougne"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Ardougne teleport");
+			}
+			else
+			{
+				addRunes(lines, 2, 0, 0, 0, 2);
+			}
+		}
+		else if (lower.contains("taverley"))
+		{
+			addTravel(lines, "Taverley teleport");
+		}
+		else if (lower.contains("catherby"))
+		{
+			addTravel(lines, "Catherby teleport");
+		}
+		else if (lower.contains("brimhaven"))
+		{
+			addTravel(lines, "Brimhaven teleport");
+		}
+		else if (lower.contains("fenkenstrain"))
+		{
+			addTravel(lines, "Fenkenstrain's castle teleport");
+		}
+		else if (lower.contains("harmony"))
+		{
+			addTravel(lines, "Harmony island teleport");
+		}
+		else if (lower.contains("trollheim"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Trollheim teleport");
+			}
+			else
+			{
+				addRunes(lines, 2, 0, 0, 2, 0);
+			}
+		}
+	}
+
+	private void addTravel(Map<String, MutableLine> lines, String name)
+	{
+		add(lines, SupplyGroup.TRAVEL, name, 1, resolve(name), false);
+	}
+
+	private void addRunes(Map<String, MutableLine> lines, int law, int air, int earth, int fire,
+		int water)
+	{
+		addRune(lines, "Law rune", law);
+		addRune(lines, "Air rune", air);
+		addRune(lines, "Earth rune", earth);
+		addRune(lines, "Fire rune", fire);
+		addRune(lines, "Water rune", water);
+	}
+
+	private void addRune(Map<String, MutableLine> lines, String name, int need)
+	{
+		if (need > 0)
+		{
+			add(lines, SupplyGroup.RUNES, name, need, resolve(name), false);
+		}
+	}
+
 	private void addCompost(Map<String, MutableLine> lines, ItemContainer bank,
 		ItemContainer inventory, ItemContainer worn)
-	{
-		if (config.bottomlessCompostBucket())
+	{		if (config.bottomlessCompostBucket())
 		{
 			add(lines, SupplyGroup.TOOLS, "Bottomless compost bucket", 1,
 				new int[]{ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED}, false);

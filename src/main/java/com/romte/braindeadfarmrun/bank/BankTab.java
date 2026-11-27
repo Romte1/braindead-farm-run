@@ -76,7 +76,6 @@ public class BankTab
 	private static final Color CARRIED = new Color(76, 193, 82);
 	private static final Color IN_STORAGE = new Color(232, 197, 58);
 	private static final Color MISSING = new Color(224, 85, 85);
-	private static final Color TELEPORT = new Color(150, 200, 255);
 	private static final String REST_OF_BANK = "Everything else";
 	private static final String TITLE = "Tab <col=ff0000>Farm run</col>";
 
@@ -90,7 +89,6 @@ public class BankTab
 	private final Map<Widget, BankSupplyLine> lineByWidget = new HashMap<>();
 	private int originalContainerChildren = -1;
 	private volatile Supplier<List<BankSupplyLine>> plan = Collections::emptyList;
-	private volatile Supplier<List<String>> teleports = Collections::emptyList;
 	private volatile boolean enabled;
 	private volatile boolean runActive;
 
@@ -106,10 +104,9 @@ public class BankTab
 		this.overlay = overlay;
 	}
 
-	public void startUp(Supplier<List<BankSupplyLine>> plan, Supplier<List<String>> teleports)
+	public void startUp(Supplier<List<BankSupplyLine>> plan)
 	{
 		this.plan = plan;
-		this.teleports = teleports;
 		overlayManager.add(overlay);
 	}
 
@@ -372,19 +369,6 @@ public class BankTab
 		{
 			height = addHeader(itemContainer, "Inventory", height);
 			height = drawSection(itemContainer, inventory, height, nextWidget, pending, bank);
-		}
-
-		List<String> teleportLines = teleports.get();
-		if (!teleportLines.isEmpty())
-		{
-			height = addHeader(itemContainer, "Teleports", height);
-			for (String line : teleportLines)
-			{
-				addedWidgets.add(createText(itemContainer, line, TELEPORT.getRGB(), 384, TEXT_HEIGHT,
-					ITEM_ROW_START, height));
-				height += TEXT_HEIGHT;
-			}
-			height += LINE_VERTICAL_SPACING;
 		}
 
 		if (!rest.isEmpty())

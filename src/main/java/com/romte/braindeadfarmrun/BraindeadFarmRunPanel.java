@@ -297,9 +297,17 @@ class BraindeadFarmRunPanel extends PluginPanel
 			text.append(prefix).append(i + 1).append(". ").append(stop.getDisplayName()).append('\n');
 
 			List<String> teleports = session.teleportsFor(i);
-			if (teleports.isEmpty())
+			if (!session.hasShortestPathResult(i))
 			{
 				text.append("     Shortest Path: calculating...\n");
+			}
+			else if (!session.reachedShortestPath(i))
+			{
+				text.append("     No route found\n");
+			}
+			else if (teleports.isEmpty())
+			{
+				text.append("     Walk / no teleport\n");
 			}
 			else
 			{

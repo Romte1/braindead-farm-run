@@ -43,6 +43,7 @@ public class RunSession
 	private volatile int index;
 	private volatile boolean active;
 	private WorldPoint lastTarget;
+	private int lastRequeryTick;
 
 	@Inject
 	RunSession(Client client, ClientThread clientThread, EventBus eventBus,
@@ -85,6 +86,16 @@ public class RunSession
 	public List<String> teleportsFor(int stopIndex)
 	{
 		return shortestPath.transportsFor(stopIndex);
+	}
+
+	public boolean hasShortestPathResult(int stopIndex)
+	{
+		return shortestPath.hasResult(stopIndex);
+	}
+
+	public boolean reachedShortestPath(int stopIndex)
+	{
+		return shortestPath.reached(stopIndex);
 	}
 
 	public List<String> allTeleportLines()
@@ -141,9 +152,16 @@ public class RunSession
 			return;
 		}
 		PatchDefinition target = current.get(currentIndex);
+		if (!shortestPath.hasResult(currentIndex)
+			&& client.getTickCount() - lastRequeryTick >= 20)
+		{
+			lastRequeryTick = client.getTickCount();
+			requeryCurrent(current, currentIndex, location);
+		}
 		if (distance(location.getX(), location.getY(), target.getX(), target.getY()) <= ARRIVAL_RADIUS)
 		{
 			index = currentIndex + 1;
+			lastRequeryTick = client.getTickCount();
 			if (index >= current.size())
 			{
 				finish();
@@ -153,6 +171,12 @@ public class RunSession
 				sendCurrentTarget();
 			}
 		}
+	}
+
+	private void requeryCurrent(List<PatchDefinition> current, int currentIndex, WorldPoint playerLocation)
+	{
+		WorldPoint start = currentIndex == 0 ? playerLocation : point(current.get(currentIndex - 1));
+		shortestPath.query(currentIndex, start, point(current.get(currentIndex)));
 	}
 
 	private void startOnClientThread(Set<PatchType> types)
@@ -196,6 +220,7 @@ public class RunSession
 			shortestPath.query(i, legStart, target);
 			legStart = target;
 		}
+		lastRequeryTick = client.getTickCount();
 		sendCurrentTarget();
 	}
 

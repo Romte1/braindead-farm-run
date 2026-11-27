@@ -25,7 +25,7 @@ public class ShortestPathService
 	private static final String ID_PREFIX = "braindead-";
 
 	private final EventBus eventBus;
-	private final Map<String, List<String>> transports = new ConcurrentHashMap<>();
+	private final Map<String, QueryResult> results = new ConcurrentHashMap<>();
 
 	@Inject
 	ShortestPathService(EventBus eventBus)
@@ -53,17 +53,29 @@ public class ShortestPathService
 		eventBus.post(new PluginMessage(NAMESPACE, "query", data));
 	}
 
+	public boolean hasResult(int index)
+	{
+		return results.containsKey(id(index));
+	}
+
+	public boolean reached(int index)
+	{
+		QueryResult result = results.get(id(index));
+		return result != null && result.reached;
+	}
+
 	public List<String> transportsFor(int index)
 	{
-		return transports.getOrDefault(id(index), Collections.emptyList());
+		QueryResult result = results.get(id(index));
+		return result == null ? Collections.emptyList() : result.transports;
 	}
 
 	public List<String> allTransports()
 	{
 		LinkedHashSet<String> unique = new LinkedHashSet<>();
-		for (List<String> lines : transports.values())
+		for (QueryResult result : results.values())
 		{
-			unique.addAll(lines);
+			unique.addAll(result.transports);
 		}
 		List<String> result = new ArrayList<>(unique);
 		Collections.sort(result);
@@ -72,7 +84,7 @@ public class ShortestPathService
 
 	public void clearResults()
 	{
-		transports.clear();
+		results.clear();
 	}
 
 	@Subscribe
@@ -106,11 +118,24 @@ public class ShortestPathService
 				}
 			}
 		}
-		transports.put((String) id, Collections.unmodifiableList(lines));
+		boolean reached = Boolean.TRUE.equals(data.get("reached"));
+		results.put((String) id, new QueryResult(reached, lines));
 	}
 
 	private static String id(int index)
 	{
 		return ID_PREFIX + index;
+	}
+
+	private static final class QueryResult
+	{
+		private final boolean reached;
+		private final List<String> transports;
+
+		private QueryResult(boolean reached, List<String> transports)
+		{
+			this.reached = reached;
+			this.transports = Collections.unmodifiableList(transports);
+		}
 	}
 }
