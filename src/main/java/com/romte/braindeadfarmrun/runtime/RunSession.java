@@ -36,6 +36,7 @@ public class RunSession
 	private final Client client;
 	private final ClientThread clientThread;
 	private final EventBus eventBus;
+	private final ShortestPathService shortestPath;
 	private volatile List<PatchDefinition> route = Collections.emptyList();
 	private volatile Set<PatchType> selectedTypes = Collections.unmodifiableSet(
 		EnumSet.allOf(PatchType.class));
@@ -44,11 +45,13 @@ public class RunSession
 	private WorldPoint lastTarget;
 
 	@Inject
-	RunSession(Client client, ClientThread clientThread, EventBus eventBus)
+	RunSession(Client client, ClientThread clientThread, EventBus eventBus,
+		ShortestPathService shortestPath)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
 		this.eventBus = eventBus;
+		this.shortestPath = shortestPath;
 	}
 
 	public void start(Set<PatchType> types)
@@ -67,6 +70,26 @@ public class RunSession
 	public Set<PatchType> selectedTypes()
 	{
 		return selectedTypes;
+	}
+
+	public List<PatchDefinition> stops()
+	{
+		return route;
+	}
+
+	public int currentIndex()
+	{
+		return index;
+	}
+
+	public List<String> teleportsFor(int stopIndex)
+	{
+		return shortestPath.transportsFor(stopIndex);
+	}
+
+	public List<String> allTeleportLines()
+	{
+		return shortestPath.allTransports();
 	}
 
 	public void stop()
@@ -161,6 +184,18 @@ public class RunSession
 		index = 0;
 		active = true;
 		message("Route started: " + route.size() + " stops.");
+
+		int plane = player != null && player.getWorldLocation() != null
+			? player.getWorldLocation().getPlane() : 0;
+		WorldPoint legStart = new WorldPoint(startX, startY, plane);
+		shortestPath.clearResults();
+		shortestPath.applyInventoryAndBank(point(route.get(0)));
+		for (int i = 0; i < route.size(); i++)
+		{
+			WorldPoint target = point(route.get(i));
+			shortestPath.query(i, legStart, target);
+			legStart = target;
+		}
 		sendCurrentTarget();
 	}
 
@@ -170,6 +205,7 @@ public class RunSession
 		active = false;
 		route = Collections.emptyList();
 		index = 0;
+		shortestPath.clearResults();
 		clearPath();
 		if (announce && wasActive)
 		{
@@ -182,8 +218,14 @@ public class RunSession
 		active = false;
 		route = Collections.emptyList();
 		index = 0;
+		shortestPath.clearResults();
 		clearPath();
 		message("Run complete.");
+	}
+
+	private static WorldPoint point(PatchDefinition patch)
+	{
+		return new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
 	}
 
 	private void sendCurrentTarget()

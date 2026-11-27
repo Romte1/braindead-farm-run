@@ -5,6 +5,7 @@ import com.romte.braindeadfarmrun.bank.BankTab;
 import com.romte.braindeadfarmrun.bank.SupplyPlanner;
 import com.romte.braindeadfarmrun.runtime.PatchTracker;
 import com.romte.braindeadfarmrun.runtime.RunSession;
+import com.romte.braindeadfarmrun.runtime.ShortestPathService;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -55,6 +56,9 @@ public class BraindeadFarmRunPlugin extends Plugin
 	private RunSession runSession;
 
 	@Inject
+	private ShortestPathService shortestPathService;
+
+	@Inject
 	private BankTab bankTab;
 
 	@Inject
@@ -74,9 +78,11 @@ public class BraindeadFarmRunPlugin extends Plugin
 	{
 		patchTracker.startUp();
 		eventBus.register(patchTracker);
+		eventBus.register(shortestPathService);
 		eventBus.register(runSession);
 
-		bankTab.startUp(() -> supplyPlanner.plan(runSession.selectedTypes(), patchTracker.snapshot()));
+		bankTab.startUp(() -> supplyPlanner.plan(runSession.selectedTypes(), patchTracker.snapshot()),
+			runSession::allTeleportLines);
 		bankTab.setEnabled(true);
 		clientThread.invokeLater(supplyPlanner::refreshQuestState);
 
@@ -101,6 +107,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		}
 		eventBus.unregister(patchTracker);
 		patchTracker.shutDown();
+		eventBus.unregister(shortestPathService);
 		eventBus.unregister(runSession);
 		runSession.stop();
 		bankTab.shutDown();
