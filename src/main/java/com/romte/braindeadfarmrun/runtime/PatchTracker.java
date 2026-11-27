@@ -43,6 +43,7 @@ import net.runelite.client.eventbus.Subscribe;
 public class PatchTracker
 {
 	private static final String STATE_KEY = "patchStates";
+	private static final String TIME_TRACKING_GROUP = "timetracking";
 	private static final Type STORED_TYPE = new TypeToken<Map<String, StoredPatch>>()
 	{
 	}.getType();
@@ -51,18 +52,21 @@ public class PatchTracker
 	private final ClientThread clientThread;
 	private final ConfigManager configManager;
 	private final Gson gson;
+	private final BraindeadFarmRunConfig config;
 	private final Map<String, PatchState> states = new ConcurrentHashMap<>();
 	private final Map<GameObject, TrackedObject> tracked = new HashMap<>();
 	private final Set<Integer> farmingVarbits = new HashSet<>();
 	private volatile boolean dirty;
 
 	@Inject
-	PatchTracker(Client client, ClientThread clientThread, ConfigManager configManager, Gson gson)
+	PatchTracker(Client client, ClientThread clientThread, ConfigManager configManager, Gson gson,
+		BraindeadFarmRunConfig config)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
 		this.configManager = configManager;
 		this.gson = gson;
+		this.config = config;
 		for (PatchDefinition patch : Patches.all())
 		{
 			farmingVarbits.add(patch.getVarbit());
@@ -76,6 +80,7 @@ public class PatchTracker
 			if (client.getGameState() == GameState.LOGGED_IN)
 			{
 				load();
+				importTimeTracking();
 			}
 		});
 	}
@@ -155,6 +160,7 @@ public class PatchTracker
 		{
 			case LOGGED_IN:
 				load();
+				importTimeTracking();
 				break;
 			case LOGIN_SCREEN:
 				save();
@@ -212,6 +218,75 @@ public class PatchTracker
 			{
 				states.put(entry.getKey(), state);
 			}
+		}
+	}
+
+	/**
+	 * Reads the timers RuneLite's Time Tracking plugin already saved. Each patch is stored as
+	 * {@code regionId.varbitId = "value:unixSeconds"}; the timestamp is when the varbit changed,
+	 * which lets us estimate the planting time without visiting the patch.
+	 */
+	private void importTimeTracking()
+	{
+		if (!config.importTimeTracking() || configManager.getRSProfileKey() == null)
+		{
+			return;
+		}
+		boolean changed = false;
+		for (PatchDefinition patch : Patches.all())
+		{
+			String raw = configManager.getRSProfileConfiguration(TIME_TRACKING_GROUP,
+				patch.getRegionId() + "." + patch.getVarbit());
+			if (raw == null)
+			{
+				continue;
+			}
+			String[] parts = raw.split(":");
+			if (parts.length < 2)
+			{
+				continue;
+			}
+			int value;
+			long changedAtSeconds;
+			try
+			{
+				value = Integer.parseInt(parts[0]);
+				changedAtSeconds = Long.parseLong(parts[1]);
+			}
+			catch (NumberFormatException e)
+			{
+				continue;
+			}
+			Instant changedAt = Instant.ofEpochSecond(changedAtSeconds);
+			PatchState previous = states.get(patch.getId());
+			if (previous != null && previous.getPlantedAt() != null
+				&& previous.getPlantedAt().toEpochMilli() >= changedAt.toEpochMilli() - 60_000L)
+			{
+				continue; // our live data is newer
+			}
+			PatchStates.Decoded decoded = PatchStates.get().decode(patch.getType(), value);
+			if (decoded.getState() == PatchStates.State.UNKNOWN)
+			{
+				continue;
+			}
+			if (decoded.getState() == PatchStates.State.EMPTY)
+			{
+				boolean newer = previous == null || previous.getPlantedAt() == null
+					|| previous.getPlantedAt().toEpochMilli() < changedAt.toEpochMilli() - 60_000L;
+				if (newer && (previous == null || previous.getCrop() != null))
+				{
+					states.put(patch.getId(), PatchState.empty(patch.getId()));
+					changed = true;
+				}
+				continue;
+			}
+			states.put(patch.getId(),
+				PatchStateMapper.applyAt(patch.getId(), decoded, previous, changedAt));
+			changed = true;
+		}
+		if (changed)
+		{
+			save();
 		}
 	}
 

@@ -97,6 +97,20 @@ public class PatchStateMapperTest
 	}
 
 	@Test
+	public void timeTrackingObservationUsesTheChangeTime()
+	{
+		Instant changedAt = NOW.minus(Duration.ofHours(2));
+
+		PatchState growing = PatchStateMapper.applyAt(PATCH, states.decode(PatchType.HERB, 6), null, changedAt);
+		assertEquals(changedAt.minus(Duration.ofMinutes(40)), growing.getPlantedAt());
+		assertEquals(PatchState.Status.READY, growing.statusAt(NOW));
+
+		PatchState ready = PatchStateMapper.applyAt(PATCH, states.decode(PatchType.HERB, 8), null, changedAt);
+		assertEquals(changedAt.minus(Duration.ofMinutes(80)), ready.getPlantedAt());
+		assertEquals(PatchState.Status.READY, ready.statusAt(NOW));
+	}
+
+	@Test
 	public void changingCropClearsPaidFlag()
 	{
 		PatchState previous = PatchState.planted(PATCH, Crop.GUAM, NOW.minus(Duration.ofMinutes(30)), true);

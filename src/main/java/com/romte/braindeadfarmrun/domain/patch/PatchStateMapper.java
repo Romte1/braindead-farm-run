@@ -13,8 +13,19 @@ public final class PatchStateMapper
 	{
 	}
 
+	/** Applies a live observation (the patch state was just seen). */
 	public static PatchState apply(String patchId, PatchStates.Decoded decoded, PatchState previous,
 		Instant now)
+	{
+		return applyAt(patchId, decoded, previous, now);
+	}
+
+	/**
+	 * Applies an observation made at {@code observedAt}. Time Tracking stores the time the
+	 * varbit changed, which lets us estimate the planting time without visiting the patch.
+	 */
+	public static PatchState applyAt(String patchId, PatchStates.Decoded decoded,
+		PatchState previous, Instant observedAt)
 	{
 		switch (decoded.getState())
 		{
@@ -33,7 +44,7 @@ public final class PatchStateMapper
 				{
 					return previous != null ? previous : PatchState.empty(patchId);
 				}
-				Instant plantedAt = plantedAt(crop, decoded, previous, now);
+				Instant plantedAt = plantedAt(crop, decoded, previous, observedAt);
 				boolean paid = previous != null && previous.getCrop() == crop && previous.isPaid();
 				return PatchState.planted(patchId, crop, plantedAt, paid)
 					.withDiseased(decoded.getState() == PatchStates.State.DISEASED)
@@ -47,7 +58,7 @@ public final class PatchStateMapper
 	}
 
 	private static Instant plantedAt(Crop crop, PatchStates.Decoded decoded, PatchState previous,
-		Instant now)
+		Instant observedAt)
 	{
 		if (previous != null && previous.getCrop() == crop && previous.getPlantedAt() != null)
 		{
@@ -64,6 +75,6 @@ public final class PatchStateMapper
 			default:
 				elapsedMinutes = Math.max(0, decoded.getStage() * crop.getType().getTickMinutes());
 		}
-		return now.minus(Duration.ofMinutes(elapsedMinutes));
+		return observedAt.minus(Duration.ofMinutes(elapsedMinutes));
 	}
 }
