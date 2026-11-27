@@ -3,6 +3,7 @@ package com.romte.braindeadfarmrun.bank;
 import java.awt.Rectangle;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.ScriptEvent;
@@ -21,6 +22,7 @@ import net.runelite.client.plugins.bank.BankSearch;
  * mechanism Quest Helper and Farm Run Autopilot use: a normal bank-tab button, not a Bank Tags
  * tag.
  */
+@Slf4j
 @Singleton
 class BankTabButton
 {
@@ -60,10 +62,17 @@ class BankTabButton
 			return;
 		}
 		Widget parent = client.getWidget(InterfaceID.Bankmain.UNIVERSE);
-		if (parent == null || isChildOf(parent, background))
+		if (parent == null)
 		{
-			return; // already built for the bank that is open
+			return;
 		}
+		// A bank rebuild can leave the old button hidden while still being a child of the
+		// universe. Always create a fresh button and hide the old one, like Quest Helper.
+		if (background != null)
+		{
+			background.setHidden(true);
+		}
+		log.debug("Bank tab button init active={}", active);
 		background = createGraphic(parent, NAME, TAB_BUTTON, BUTTON_SIZE, BUTTON_X, BUTTON_Y);
 		background.setAction(1, VIEW_TAB);
 		background.setOnOpListener((Object[]) new Object[]{(JavaScriptCallback) this::onClick});
@@ -78,8 +87,7 @@ class BankTabButton
 	/** The bank interface was loaded again; the old widgets belong to the previous one. */
 	void reload()
 	{
-		Widget parent = client.getWidget(InterfaceID.Bankmain.UNIVERSE);
-		if (isChildOf(parent, background))
+		if (background != null)
 		{
 			background.setHidden(true);
 		}
@@ -155,6 +163,7 @@ class BankTabButton
 
 	void onSearchToggled()
 	{
+		log.debug("Bank tab button search toggled active={}", active);
 		if (active)
 		{
 			close();
@@ -196,15 +205,23 @@ class BankTabButton
 		{
 			return;
 		}
+		boolean wasActive = active;
+		log.debug("Bank tab button activate wasActive={}", wasActive);
 		background.setSpriteId(TAB_BUTTON_ACTIVE);
 		background.revalidate();
 		active = true;
-		bankSearch.reset(true);
-		clearSearchButton();
+		if (!wasActive)
+		{
+			// Only reset the search when the tab is actually being opened. Reapplying the
+			// active state after a bank rebuild must not toggle search and close the tab.
+			bankSearch.reset(true);
+			clearSearchButton();
+		}
 	}
 
 	private void close()
 	{
+		log.debug("Bank tab button close");
 		active = false;
 		if (background != null)
 		{
@@ -227,27 +244,6 @@ class BankTabButton
 	{
 		Widget bank = client.getWidget(InterfaceID.Bankmain.UNIVERSE);
 		return bank == null || bank.isHidden();
-	}
-
-	private static boolean isChildOf(Widget parent, Widget child)
-	{
-		if (parent == null || child == null)
-		{
-			return false;
-		}
-		Widget[] children = parent.getChildren();
-		if (children == null)
-		{
-			return false;
-		}
-		for (Widget candidate : children)
-		{
-			if (candidate == child)
-			{
-				return true;
-			}
-		}
-		return false;
 	}
 
 	private static Widget createGraphic(Widget parent, String name, int spriteId, int size, int x, int y)

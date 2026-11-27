@@ -44,6 +44,7 @@ public class RunSession
 		EnumSet.allOf(PatchType.class));
 	private volatile int index;
 	private volatile boolean active;
+	private volatile boolean preparing;
 	private volatile boolean routeReady;
 	private WorldPoint lastTarget;
 
@@ -59,8 +60,19 @@ public class RunSession
 
 	public void start(Set<PatchType> types)
 	{
+		preparing = true;
 		setSelectedTypes(types);
 		clientThread.invokeLater(() -> startOnClientThread(types));
+	}
+
+	public boolean isPreparing()
+	{
+		return preparing;
+	}
+
+	public void setPreparing(boolean preparing)
+	{
+		this.preparing = preparing;
 	}
 
 	public void setSelectedTypes(Set<PatchType> types)
@@ -305,6 +317,7 @@ public class RunSession
 	private void startOnClientThread(Set<PatchType> types)
 	{
 		stopOnClientThread(false);
+		preparing = true;
 
 		List<PatchDefinition> patches = new ArrayList<>();
 		for (PatchType type : types)
@@ -313,6 +326,7 @@ public class RunSession
 		}
 		if (patches.isEmpty())
 		{
+			preparing = false;
 			message("No patches selected.");
 			return;
 		}
@@ -357,6 +371,7 @@ public class RunSession
 	{
 		boolean wasActive = active;
 		active = false;
+		preparing = false;
 		routeReady = false;
 		route = Collections.emptyList();
 		index = 0;
@@ -371,6 +386,7 @@ public class RunSession
 	private void finish()
 	{
 		active = false;
+		preparing = false;
 		routeReady = false;
 		route = Collections.emptyList();
 		index = 0;

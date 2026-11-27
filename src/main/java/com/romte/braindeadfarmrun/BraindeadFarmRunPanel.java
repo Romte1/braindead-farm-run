@@ -25,6 +25,7 @@ import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.PluginPanel;
 
@@ -57,7 +58,9 @@ class BraindeadFarmRunPanel extends PluginPanel
 	private final JCheckBox bottomless = checkbox("Bottomless compost bucket", true);
 	private final JLabel status = new JLabel("Select runs and press START RUN.");
 	private final JTextArea runText = new JTextArea();
-	private boolean wasActive;
+	private final Timer preparingTimer = new Timer(300, event -> animatePreparing());
+	private int preparingDots;
+	private boolean wasRun;
 
 	BraindeadFarmRunPanel(RunSession session, BraindeadFarmRunConfig config,
 		ConfigManager configManager)
@@ -233,7 +236,9 @@ class BraindeadFarmRunPanel extends PluginPanel
 			status.setText("Select at least one run type.");
 			return;
 		}
-		status.setText("Building route...");
+		status.setText("Creating route...");
+		startButton.setEnabled(false);
+		startPreparingAnimation();
 		session.start(types);
 	}
 
@@ -269,20 +274,60 @@ class BraindeadFarmRunPanel extends PluginPanel
 		SwingUtilities.invokeLater(() ->
 		{
 			boolean active = session.isActive();
-			if (active != wasActive)
+			boolean preparing = session.isPreparing();
+			boolean showRun = active && !preparing;
+			if (showRun != wasRun)
 			{
-				cards.show(root, active ? "run" : "setup");
+				cards.show(root, showRun ? "run" : "setup");
+			}
+			if (preparing)
+			{
+				startPreparingAnimation();
+			}
+			else
+			{
+				stopPreparingAnimation();
+				startButton.setEnabled(true);
+				startButton.setText("START RUN");
 				if (!active)
 				{
-					status.setText("Run finished. Select runs and press START RUN.");
+					status.setText(wasRun
+						? "Run finished. Select runs and press START RUN."
+						: "Select runs and press START RUN.");
 				}
 			}
-			if (active)
+			if (active && !preparing)
 			{
 				updateRunText();
 			}
-			wasActive = active;
+			wasRun = showRun;
 		});
+	}
+
+	private void startPreparingAnimation()
+	{
+		if (!preparingTimer.isRunning())
+		{
+			preparingDots = 0;
+			preparingTimer.start();
+		}
+	}
+
+	private void stopPreparingAnimation()
+	{
+		if (preparingTimer.isRunning())
+		{
+			preparingTimer.stop();
+		}
+		preparingDots = 0;
+	}
+
+	private void animatePreparing()
+	{
+		preparingDots = (preparingDots + 1) % 4;
+		String dots = ".".repeat(preparingDots);
+		startButton.setText("CREATING ROUTE" + dots);
+		status.setText("Creating route" + dots);
 	}
 
 	private void updateRunText()

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
@@ -64,6 +65,8 @@ public class SupplyPlanner
 	private final Client client;
 	private final ItemManager itemManager;
 	private final BraindeadFarmRunConfig config;
+	private final Map<String, int[]> resolveCache = new ConcurrentHashMap<>();
+	private final Map<String, int[]> chargedCache = new ConcurrentHashMap<>();
 	private volatile boolean magicSecateurs;
 
 	@Inject
@@ -568,10 +571,17 @@ public class SupplyPlanner
 	 */
 	private int[] resolveCharged(String name)
 	{
+		int[] cached = chargedCache.get(name);
+		if (cached != null)
+		{
+			return cached;
+		}
 		List<ItemPrice> prices = itemManager.search(name);
 		if (prices == null || prices.isEmpty())
 		{
-			return new int[0];
+			int[] empty = new int[0];
+			chargedCache.put(name, empty);
+			return empty;
 		}
 		String query = name.toLowerCase(Locale.ROOT);
 		List<ItemPrice> matching = new ArrayList<>();
@@ -630,6 +640,7 @@ public class SupplyPlanner
 		{
 			result[i] = charged.get(i);
 		}
+		chargedCache.put(name, result);
 		return result;
 	}
 
@@ -1005,10 +1016,17 @@ public class SupplyPlanner
 
 	private int[] resolve(String name)
 	{
+		int[] cached = resolveCache.get(name);
+		if (cached != null)
+		{
+			return cached;
+		}
 		List<ItemPrice> prices = itemManager.search(name);
 		if (prices == null || prices.isEmpty())
 		{
-			return new int[0];
+			int[] empty = new int[0];
+			resolveCache.put(name, empty);
+			return empty;
 		}
 		List<ItemPrice> exact = new ArrayList<>();
 		for (ItemPrice price : prices)
@@ -1023,11 +1041,10 @@ public class SupplyPlanner
 			.mapToInt(ItemPrice::getId)
 			.filter(id -> itemManager.getItemComposition(id).getNote() == 0)
 			.toArray();
-		if (unnoted.length > 0)
-		{
-			return unnoted;
-		}
-		return candidates.stream().mapToInt(ItemPrice::getId).toArray();
+		int[] result = unnoted.length > 0 ? unnoted
+			: candidates.stream().mapToInt(ItemPrice::getId).toArray();
+		resolveCache.put(name, result);
+		return result;
 	}
 
 	private static void add(Map<String, MutableLine> lines, SupplyGroup group, String name, int need,

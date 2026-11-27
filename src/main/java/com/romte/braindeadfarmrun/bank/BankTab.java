@@ -60,7 +60,7 @@ public class BankTab
 	private static final int TEXT_HEIGHT = 15;
 	private static final int ICON_SIZE = 10;
 	private static final int PLANNED_ROW_SPACING = 64;
-	private static final int MAX_REST_ITEMS = 200;
+	private static final int MAX_REST_ITEMS = 100;
 	private static final int ITEM_WIDTH = 36;
 	private static final int ITEM_HEIGHT = 32;
 	private static final int LABEL_WIDTH = 46;
@@ -94,6 +94,8 @@ public class BankTab
 	private volatile Supplier<List<BankSupplyLine>> plan = Collections::emptyList;
 	private volatile List<BankSupplyLine> cachedPlan = Collections.emptyList();
 	private volatile boolean planDirty = true;
+	private volatile boolean planComputed;
+	private volatile boolean buttonUnlocked;
 	private volatile boolean enabled;
 	private volatile boolean runActive;
 	private boolean layingOut;
@@ -139,9 +141,11 @@ public class BankTab
 		}
 		runActive = active;
 		planDirty = true;
+		planComputed = false;
 		if (!active)
 		{
 			cachedPlan = Collections.emptyList();
+			buttonUnlocked = false;
 		}
 		clientThread.invokeLater(() ->
 		{
@@ -150,7 +154,7 @@ public class BankTab
 				button.destroy();
 				removeAddedWidgets();
 			}
-			else if (enabled)
+			else if (enabled && buttonUnlocked)
 			{
 				button.init();
 			}
@@ -161,6 +165,29 @@ public class BankTab
 	public void invalidatePlan()
 	{
 		planDirty = true;
+		planComputed = false;
+	}
+
+	public boolean hasPlan()
+	{
+		return planComputed;
+	}
+
+	/** Reveal the bank-tab button only after the complete route and supply plan exist. */
+	public void unlockButton()
+	{
+		if (!runActive || buttonUnlocked)
+		{
+			return;
+		}
+		buttonUnlocked = true;
+		clientThread.invokeLater(() ->
+		{
+			if (runActive && enabled)
+			{
+				button.init();
+			}
+		});
 	}
 
 	public void onGameTick()
@@ -199,7 +226,7 @@ public class BankTab
 		}
 		if (enabled)
 		{
-			if (runActive)
+			if (runActive && buttonUnlocked)
 			{
 				button.init();
 			}
@@ -219,7 +246,7 @@ public class BankTab
 			lastScroll = -1;
 			addedWidgets.clear();
 			lineByWidget.clear();
-			if (runActive)
+			if (runActive && buttonUnlocked)
 			{
 				button.reload();
 			}
@@ -276,7 +303,7 @@ public class BankTab
 			removeAddedWidgets();
 			return;
 		}
-		if (enabled)
+		if (enabled && buttonUnlocked)
 		{
 			// The bank's title bar is only ready once building finishes, so retry here in case
 			// the WidgetLoaded init ran too early.
@@ -344,10 +371,14 @@ public class BankTab
 
 	public void refresh()
 	{
-		if (!runActive || !button.isActive() || layingOut)
+		if (!runActive || layingOut)
 		{
-			log.debug("Bank tab refresh skipped: runActive={} active={} layingOut={}",
-				runActive, button.isActive(), layingOut);
+			log.debug("Bank tab refresh skipped: runActive={} layingOut={}", runActive, layingOut);
+			return;
+		}
+		computePlanIfDirty();
+		if (!button.isActive())
+		{
 			return;
 		}
 		Widget itemContainer = client.getWidget(InterfaceID.Bankmain.ITEMS);
@@ -359,7 +390,6 @@ public class BankTab
 		try
 		{
 			removeAddedWidgets();
-			computePlanIfDirty();
 			layOut(itemContainer, itemContainer.getDynamicChildren(), cachedPlan);
 		}
 		finally
@@ -392,6 +422,7 @@ public class BankTab
 			}
 			cachedPlan = computed;
 			planDirty = false;
+			planComputed = true;
 			log.debug("Bank tab plan computed: {} lines", cachedPlan.size());
 			refresh();
 		});
