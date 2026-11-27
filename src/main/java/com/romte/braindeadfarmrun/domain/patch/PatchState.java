@@ -69,6 +69,11 @@ public final class PatchState
 		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);
 	}
 
+	public PatchState withPaid(boolean paid)
+	{
+		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);
+	}
+
 	public PatchState withCheckHealth(boolean checkHealth)
 	{
 		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);

@@ -147,7 +147,7 @@ public class RunSession
 		}
 		PatchDefinition patch = route.get(index);
 		PatchState state = patchTracker.snapshot().get(patch.getId());
-		guide = new StopGuide(patch, state, patchTracker.isProtected(patch));
+		guide = new StopGuide(patch, state);
 		lastGuideKey = null;
 		updateCurrentTasks();
 	}
@@ -483,6 +483,7 @@ public class RunSession
 		if (head != null && head.getModelType() == WidgetModelType.NPC_CHATHEAD)
 		{
 			guide.onPayment();
+			patchTracker.markPaid(route.get(index));
 			updateCurrentTasks();
 		}
 	}
@@ -494,6 +495,7 @@ public class RunSession
 			&& FALADOR_DIARY_TEXT.equals(event.getMessage()))
 		{
 			guide.onPayment();
+			patchTracker.markPaid(route.get(index));
 			updateCurrentTasks();
 		}
 	}

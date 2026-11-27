@@ -123,6 +123,21 @@ public class PatchTracker
 		return false;
 	}
 
+	/** Records that the player paid the farmer for this patch. */
+	public void markPaid(PatchDefinition patch)
+	{
+		if (patch == null)
+		{
+			return;
+		}
+		PatchState state = states.get(patch.getId());
+		if (state != null)
+		{
+			states.put(patch.getId(), state.withPaid(true));
+			dirty = true;
+		}
+	}
+
 	/** Reads the live varbit for a patch, refreshing state that may have loaded before the scene. */
 	public void refresh(PatchDefinition patch)
 	{

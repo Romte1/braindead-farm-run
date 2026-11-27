@@ -47,7 +47,7 @@ final class StopGuide
 	private PatchState state;
 	private String plantItemName;
 
-	StopGuide(PatchDefinition patch, PatchState initialState, boolean protectedNow)
+	StopGuide(PatchDefinition patch, PatchState initialState)
 	{
 		this.type = patch.getType();
 		this.state = initialState;
@@ -100,7 +100,9 @@ final class StopGuide
 				: initialCrop.getPlantedItemName();
 			steps.add(new Step(Phase.PLANT, "Plant " + plant + "."));
 		}
-		if (paymentNeeded && !(status == PatchState.Status.GROWING && protectedNow))
+		// A patch that is already growing was planted before this run. Do not send the
+		// player back to pay for protection again; that decision belongs to planting time.
+		if (paymentNeeded && status != PatchState.Status.GROWING)
 		{
 			steps.add(new Step(Phase.PAY,
 				"Pay the farmer to protect it (choose 'Yes, please')."));
@@ -108,7 +110,7 @@ final class StopGuide
 
 		if (status == PatchState.Status.GROWING)
 		{
-			phase = paymentNeeded && !protectedNow ? Phase.PAY : Phase.COMPLETE;
+			phase = Phase.COMPLETE;
 		}
 		else if (checkHealth)
 		{
