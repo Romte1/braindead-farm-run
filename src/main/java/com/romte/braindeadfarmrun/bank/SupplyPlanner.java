@@ -33,6 +33,7 @@ public class SupplyPlanner
 	private final Client client;
 	private final ItemManager itemManager;
 	private final BraindeadFarmRunConfig config;
+	private volatile boolean magicSecateurs;
 
 	@Inject
 	SupplyPlanner(Client client, ItemManager itemManager, BraindeadFarmRunConfig config)
@@ -42,9 +43,14 @@ public class SupplyPlanner
 		this.config = config;
 	}
 
-	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states)
+	/** Must be called on the client thread outside a script (Quest.getState runs a script). */
+	public void refreshQuestState()
 	{
-		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
+		magicSecateurs = Quest.FAIRYTALE_I__GROWING_PAINS.getState(client) == QuestState.FINISHED;
+	}
+
+	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states)
+	{		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
 
@@ -66,11 +72,10 @@ public class SupplyPlanner
 		}
 		if (trees || fruitTrees)
 		{
-			boolean magicSecateurs = Quest.FAIRYTALE_I__GROWING_PAINS.getState(client)
-				== QuestState.FINISHED;
+			boolean magic = magicSecateurs;
 			add(lines, SupplyGroup.TOOLS,
-				magicSecateurs ? "Magic secateurs" : "Secateurs", 1,
-				new int[]{magicSecateurs ? ItemID.FAIRY_ENCHANTED_SECATEURS : ItemID.SECATEURS},
+				magic ? "Magic secateurs" : "Secateurs", 1,
+				new int[]{magic ? ItemID.FAIRY_ENCHANTED_SECATEURS : ItemID.SECATEURS},
 				false);
 		}
 		addCompost(lines, bank, inventory, worn);

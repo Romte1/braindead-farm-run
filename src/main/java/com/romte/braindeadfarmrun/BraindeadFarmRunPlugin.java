@@ -11,11 +11,14 @@ import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.ScriptCallbackEvent;
 import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.events.ScriptPreFired;
 import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.GameState;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
@@ -40,6 +43,9 @@ public class BraindeadFarmRunPlugin extends Plugin
 	private ConfigManager configManager;
 
 	@Inject
+	private ClientThread clientThread;
+
+	@Inject
 	private ClientToolbar clientToolbar;
 
 	@Inject
@@ -61,6 +67,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 	private BraindeadFarmRunPanel panel;
 	private int panelTicks;
 	private int bankTicks;
+	private int questTicks;
 
 	@Override
 	protected void startUp()
@@ -71,6 +78,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 
 		bankTab.startUp(() -> supplyPlanner.plan(runSession.selectedTypes(), patchTracker.snapshot()));
 		bankTab.setEnabled(true);
+		clientThread.invokeLater(supplyPlanner::refreshQuestState);
 
 		panel = new BraindeadFarmRunPanel(runSession, config, configManager);
 		navButton = NavigationButton.builder()
@@ -103,6 +111,10 @@ public class BraindeadFarmRunPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
+		if (questTicks++ % 100 == 0)
+		{
+			supplyPlanner.refreshQuestState();
+		}
 		bankTab.setRunActive(runSession.isActive());
 		bankTab.onGameTick();
 		if (panel != null && ++panelTicks % 5 == 0)
@@ -112,6 +124,16 @@ public class BraindeadFarmRunPlugin extends Plugin
 		if (++bankTicks % 20 == 0)
 		{
 			bankTab.refresh();
+		}
+	}
+
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged event)
+	{
+		if (event.getGameState() == GameState.LOGGED_IN)
+		{
+			questTicks = 0;
+			clientThread.invokeLater(supplyPlanner::refreshQuestState);
 		}
 	}
 
