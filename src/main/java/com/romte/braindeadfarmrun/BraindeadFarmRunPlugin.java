@@ -2,6 +2,7 @@ package com.romte.braindeadfarmrun;
 
 import com.google.inject.Provides;
 import com.romte.braindeadfarmrun.runtime.PatchTracker;
+import com.romte.braindeadfarmrun.runtime.RunSession;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -34,6 +35,9 @@ public class BraindeadFarmRunPlugin extends Plugin
 	private PatchTracker patchTracker;
 
 	@Inject
+	private RunSession runSession;
+
+	@Inject
 	private EventBus eventBus;
 
 	private NavigationButton navButton;
@@ -45,8 +49,9 @@ public class BraindeadFarmRunPlugin extends Plugin
 	{
 		patchTracker.startUp();
 		eventBus.register(patchTracker);
+		eventBus.register(runSession);
 
-		panel = new BraindeadFarmRunPanel(patchTracker);
+		panel = new BraindeadFarmRunPanel(runSession);
 		navButton = NavigationButton.builder()
 			.tooltip("Braindead Farm Run")
 			.icon(createIcon())
@@ -67,6 +72,8 @@ public class BraindeadFarmRunPlugin extends Plugin
 		}
 		eventBus.unregister(patchTracker);
 		patchTracker.shutDown();
+		eventBus.unregister(runSession);
+		runSession.stop();
 		panel = null;
 		log.debug("Braindead Farm Run stopped");
 	}
@@ -74,7 +81,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		if (panel != null && ++panelTicks % 20 == 0)
+		if (panel != null && ++panelTicks % 5 == 0)
 		{
 			panel.refresh();
 		}

@@ -1,152 +1,127 @@
 package com.romte.braindeadfarmrun;
 
-import com.romte.braindeadfarmrun.data.Patches;
-import com.romte.braindeadfarmrun.domain.patch.GrowthClock;
-import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
-import com.romte.braindeadfarmrun.domain.patch.PatchState;
-import com.romte.braindeadfarmrun.runtime.PatchTracker;
-import java.awt.BorderLayout;
+import com.romte.braindeadfarmrun.domain.patch.PatchType;
+import com.romte.braindeadfarmrun.runtime.RunSession;
 import java.awt.Color;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.awt.Component;
+import java.util.EnumSet;
+import java.util.Set;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import net.runelite.client.ui.PluginPanel;
 
 /**
- * Sidebar panel with the current patch timers. The run planner and supply sections will be added
- * in later phases.
+ * Minimal run panel: pick the run types, press START RUN, and the session sends each stop to
+ * Shortest Path.
  */
 class BraindeadFarmRunPanel extends PluginPanel
 {
-	private final PatchTracker tracker;
-	private final JTextArea text = new JTextArea();
+	private final RunSession session;
+	private final JButton startButton = new JButton("START RUN");
+	private final JCheckBox herbs = checkbox("Herbs");
+	private final JCheckBox trees = checkbox("Trees");
+	private final JCheckBox fruitTrees = checkbox("Fruit trees");
+	private final JCheckBox allotments = checkbox("Allotments");
+	private final JLabel status = new JLabel("Select runs and press START RUN.");
+	private boolean wasActive;
 
-	BraindeadFarmRunPanel(PatchTracker tracker)
+	BraindeadFarmRunPanel(RunSession session)
 	{
 		super(false);
-		this.tracker = tracker;
-		setLayout(new BorderLayout());
+		this.session = session;
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
 		JLabel title = new JLabel("Braindead Farm Run");
-		title.setHorizontalAlignment(SwingConstants.CENTER);
+		title.setAlignmentX(Component.CENTER_ALIGNMENT);
 		title.setForeground(Color.WHITE);
-		add(title, BorderLayout.NORTH);
+		add(title);
+		add(Box.createVerticalStrut(12));
 
-		text.setEditable(false);
-		text.setOpaque(false);
-		text.setForeground(Color.LIGHT_GRAY);
-		text.setLineWrap(true);
-		text.setWrapStyleWord(true);
-		text.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+		startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+		startButton.addActionListener(event -> toggle());
+		add(startButton);
+		add(Box.createVerticalStrut(12));
 
-		JScrollPane scroll = new JScrollPane(text);
-		scroll.setBorder(null);
-		scroll.setOpaque(false);
-		scroll.getViewport().setOpaque(false);
-		add(scroll, BorderLayout.CENTER);
+		add(herbs);
+		add(trees);
+		add(fruitTrees);
+		add(allotments);
+		add(Box.createVerticalStrut(12));
+
+		status.setAlignmentX(Component.CENTER_ALIGNMENT);
+		status.setForeground(Color.LIGHT_GRAY);
+		add(status);
 
 		refresh();
 	}
 
+	private static JCheckBox checkbox(String text)
+	{
+		JCheckBox box = new JCheckBox(text, true);
+		box.setOpaque(false);
+		box.setForeground(Color.LIGHT_GRAY);
+		box.setAlignmentX(Component.LEFT_ALIGNMENT);
+		return box;
+	}
+
+	private void toggle()
+	{
+		if (session.isActive())
+		{
+			session.stop();
+			return;
+		}
+
+		Set<PatchType> types = EnumSet.noneOf(PatchType.class);
+		if (herbs.isSelected())
+		{
+			types.add(PatchType.HERB);
+		}
+		if (trees.isSelected())
+		{
+			types.add(PatchType.TREE);
+		}
+		if (fruitTrees.isSelected())
+		{
+			types.add(PatchType.FRUIT_TREE);
+		}
+		if (allotments.isSelected())
+		{
+			types.add(PatchType.ALLOTMENT);
+		}
+		if (types.isEmpty())
+		{
+			status.setText("Select at least one run type.");
+			return;
+		}
+		status.setText("Building route...");
+		session.start(types);
+	}
+
 	void refresh()
 	{
-		Map<String, PatchState> snapshot = tracker.snapshot();
-		Instant now = Instant.now();
-		List<PatchState> active = new ArrayList<>();
-		for (PatchState state : snapshot.values())
-		{
-			if (state.getCrop() != null)
-			{
-				active.add(state);
-			}
-		}
-		active.sort(Comparator
-			.comparingLong((PatchState state) -> sortMillis(state, now))
-			.thenComparing(BraindeadFarmRunPanel::patchName));
-
-		List<String> lines = new ArrayList<>();
-		for (PatchState state : active)
-		{
-			lines.add(patchName(state) + "\n  " + state.getCrop().getDisplayName() + " - "
-				+ describe(state, now));
-		}
-		if (lines.isEmpty())
-		{
-			lines.add("No active patches.\nPlant something to start tracking.");
-		}
-
-		String value = String.join("\n\n", lines);
 		SwingUtilities.invokeLater(() ->
 		{
-			if (!value.equals(text.getText()))
+			boolean active = session.isActive();
+			startButton.setText(active ? "STOP RUN" : "START RUN");
+			if (active)
 			{
-				text.setText(value);
+				String next = session.nextStopName();
+				status.setText(next == null ? "Route active."
+					: "<html>Next: " + next + "<br>" + session.remainingStops()
+						+ " stops left</html>");
 			}
+			else if (wasActive)
+			{
+				status.setText("Run finished. Select runs and press START RUN.");
+			}
+			wasActive = active;
 		});
-	}
-
-	private static long sortMillis(PatchState state, Instant now)
-	{
-		if (state.statusAt(now) == PatchState.Status.GROWING)
-		{
-			return GrowthClock.remaining(state.getCrop(), state.getPlantedAt(), now).toMillis();
-		}
-		return 0L;
-	}
-
-	private static String patchName(PatchState state)
-	{
-		PatchDefinition patch = Patches.byId(state.getPatchId());
-		return patch != null ? patch.getDisplayName() : state.getPatchId();
-	}
-
-	private static String describe(PatchState state, Instant now)
-	{
-		switch (state.statusAt(now))
-		{
-			case READY:
-				if (state.isFell())
-				{
-					return "ready - chop down";
-				}
-				if (state.isCheckHealth())
-				{
-					return "ready - check health";
-				}
-				return "ready";
-			case STUMP:
-				return "stump - clear it";
-			case DISEASED:
-				return "diseased";
-			case DEAD:
-				return "dead";
-			case GROWING:
-				return "ready in " + format(GrowthClock.remaining(
-					state.getCrop(), state.getPlantedAt(), now));
-			default:
-				return "empty";
-		}
-	}
-
-	private static String format(Duration duration)
-	{
-		long minutes = duration.toMinutes();
-		if (minutes <= 0)
-		{
-			return "<1m";
-		}
-		long hours = minutes / 60;
-		long rest = minutes % 60;
-		return hours > 0 ? hours + "h " + rest + "m" : minutes + "m";
 	}
 }
