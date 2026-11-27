@@ -245,6 +245,10 @@ public class SupplyPlanner
 		{
 			addChargedTravel(lines, "Skills necklace");
 		}
+		else if (lower.contains("slayer ring"))
+		{
+			addChargedTravel(lines, "Slayer ring");
+		}
 		else if (lower.contains("xeric's talisman"))
 		{
 			addChargedTravel(lines, "Xeric's talisman");
@@ -948,6 +952,7 @@ public class SupplyPlanner
 				return "cape";
 			case "Explorer's ring":
 			case "Ring of wealth":
+			case "Slayer ring":
 				return "ring";
 			case "Skills necklace":
 			case "Xeric's talisman":
