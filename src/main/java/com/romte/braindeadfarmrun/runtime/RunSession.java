@@ -1,6 +1,7 @@
 package com.romte.braindeadfarmrun.runtime;
 
 import com.romte.braindeadfarmrun.data.Patches;
+import com.romte.braindeadfarmrun.domain.patch.Crop;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
@@ -19,17 +20,21 @@ import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.PluginMessage;
+import net.runelite.client.game.ItemManager;
 
 /**
  * The active farm run: selected patch types, visit order, and the next stop sent to Shortest
@@ -55,6 +60,7 @@ public class RunSession
 	private final EventBus eventBus;
 	private final ShortestPathService shortestPath;
 	private final PatchTracker patchTracker;
+	private final ItemManager itemManager;
 	private volatile List<PatchDefinition> route = Collections.emptyList();
 	private volatile Set<PatchType> selectedTypes = Collections.unmodifiableSet(
 		EnumSet.allOf(PatchType.class));
@@ -71,13 +77,14 @@ public class RunSession
 
 	@Inject
 	RunSession(Client client, ClientThread clientThread, EventBus eventBus,
-		ShortestPathService shortestPath, PatchTracker patchTracker)
+		ShortestPathService shortestPath, PatchTracker patchTracker, ItemManager itemManager)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
 		this.eventBus = eventBus;
 		this.shortestPath = shortestPath;
 		this.patchTracker = patchTracker;
+		this.itemManager = itemManager;
 	}
 
 	public void start(Set<PatchType> types)
@@ -155,6 +162,10 @@ public class RunSession
 		PatchDefinition patch = route.get(index);
 		PatchState state = patchTracker.snapshot().get(patch.getId());
 		guide.update(state, patchTracker.isProtected(patch));
+		if (guide.phase() == StopGuide.Phase.PLANT && guide.currentItemName() == null)
+		{
+			guide.setPlantItemName(findInventoryPlantItem(patch));
+		}
 		currentTasks = Collections.unmodifiableList(guide.stepLines());
 		String key = guide.phase() + (guide.isFarmerTarget() ? "/farmer" : "/patch");
 		if (!key.equals(lastGuideKey))
@@ -373,6 +384,33 @@ public class RunSession
 	public String currentItemName()
 	{
 		return active && guide != null ? guide.currentItemName() : null;
+	}
+
+	private String findInventoryPlantItem(PatchDefinition patch)
+	{
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		if (inventory == null || inventory.getItems() == null)
+		{
+			return null;
+		}
+		for (Item item : inventory.getItems())
+		{
+			if (item.getId() <= 0)
+			{
+				continue;
+			}
+			int canonical = itemManager.canonicalize(item.getId());
+			String name = itemManager.getItemComposition(canonical).getName();
+			for (Crop crop : Crop.values())
+			{
+				if (crop.getType() == patch.getType()
+					&& crop.getPlantedItemName().equalsIgnoreCase(name))
+				{
+					return name;
+				}
+			}
+		}
+		return null;
 	}
 
 	public int remainingStops()

@@ -45,6 +45,7 @@ final class StopGuide
 	private Phase phase;
 	private boolean paid;
 	private PatchState state;
+	private String plantItemName;
 
 	StopGuide(PatchDefinition patch, PatchState initialState, boolean protectedNow)
 	{
@@ -173,7 +174,8 @@ final class StopGuide
 		switch (phase)
 		{
 			case PLANT:
-				return initialCrop == null ? null : initialCrop.getPlantedItemName();
+				return plantItemName != null ? plantItemName
+					: initialCrop == null ? null : initialCrop.getPlantedItemName();
 			case PAY:
 				return initialCrop != null && initialCrop.needsPayment()
 					? initialCrop.getPaymentItem() : null;
@@ -181,6 +183,14 @@ final class StopGuide
 				return farmerRemoval ? "Coins" : "Spade";
 			default:
 				return null;
+		}
+	}
+
+	void setPlantItemName(String name)
+	{
+		if (name != null && !name.isEmpty())
+		{
+			plantItemName = name;
 		}
 	}
 
@@ -203,7 +213,9 @@ final class StopGuide
 			int stepRank = rank(step.phase);
 			String marker = phase == Phase.COMPLETE || stepRank < current
 				? "\u2713 " : stepRank == current ? "\u25B6 " : "\u25CB ";
-			lines.add(marker + step.label);
+			String label = step.phase == Phase.PLANT && plantItemName != null
+				? "Plant " + plantItemName + "." : step.label;
+			lines.add(marker + label);
 		}
 		return lines;
 	}
