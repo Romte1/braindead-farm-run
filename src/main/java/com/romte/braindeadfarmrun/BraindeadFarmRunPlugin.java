@@ -93,7 +93,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		eventBus.register(runSession);
 
 		bankTab.startUp(() -> supplyPlanner.plan(runSession.selectedTypes(),
-			patchTracker.snapshot(), runSession.allTeleportLines()));
+			patchTracker.snapshot(), runSession.allTeleportLines(), runSession.allRequiredItems()));
 		bankTab.setEnabled(true);
 		overlayManager.add(infoOverlay);
 		clientThread.invokeLater(supplyPlanner::refreshQuestState);

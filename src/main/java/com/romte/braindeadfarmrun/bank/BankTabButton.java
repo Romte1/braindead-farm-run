@@ -69,7 +69,8 @@ class BankTabButton
 		background.setOnOpListener((Object[]) new Object[]{(JavaScriptCallback) this::onClick});
 		if (active)
 		{
-			active = false;
+			background.setSpriteId(TAB_BUTTON_ACTIVE);
+			background.revalidate();
 			clientThread.invokeLater(this::activate);
 		}
 	}
@@ -191,7 +192,7 @@ class BankTabButton
 
 	private void activate()
 	{
-		if (active || background == null)
+		if (background == null)
 		{
 			return;
 		}

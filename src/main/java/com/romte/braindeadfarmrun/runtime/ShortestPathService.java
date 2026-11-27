@@ -178,6 +178,12 @@ public class ShortestPathService
 		return result == null ? Collections.emptyList() : result.transports;
 	}
 
+	public List<Integer> missingItemsFor(int index)
+	{
+		QueryResult result = results.get(id(index));
+		return result == null ? Collections.emptyList() : result.missingItems;
+	}
+
 	public void clearResults()
 	{
 		results.clear();
@@ -215,8 +221,24 @@ public class ShortestPathService
 				}
 			}
 		}
+		List<Integer> missingItems = new ArrayList<>();
+		Object missing = data.get("missingItems");
+		if (missing instanceof List)
+		{
+			for (Object entry : (List<?>) missing)
+			{
+				if (entry instanceof Integer)
+				{
+					missingItems.add((Integer) entry);
+				}
+			}
+		}
 		boolean reached = Boolean.TRUE.equals(data.get("reached"));
-		results.put((String) id, new QueryResult(reached, lines));
+		if (!missingItems.isEmpty())
+		{
+			log.debug("Shortest Path result {} needs items {}", id, missingItems);
+		}
+		results.put((String) id, new QueryResult(reached, lines, missingItems));
 	}
 
 	private static String id(int index)
@@ -228,11 +250,13 @@ public class ShortestPathService
 	{
 		private final boolean reached;
 		private final List<String> transports;
+		private final List<Integer> missingItems;
 
-		private QueryResult(boolean reached, List<String> transports)
+		private QueryResult(boolean reached, List<String> transports, List<Integer> missingItems)
 		{
 			this.reached = reached;
 			this.transports = Collections.unmodifiableList(transports);
+			this.missingItems = Collections.unmodifiableList(missingItems);
 		}
 	}
 }

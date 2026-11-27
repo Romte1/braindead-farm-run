@@ -53,7 +53,7 @@ public class SupplyPlanner
 	}
 
 	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states,
-		List<String> transports)
+		List<String> transports, List<Integer> requiredItems)
 	{		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
@@ -110,6 +110,10 @@ public class SupplyPlanner
 		{
 			addTransport(transport, lines, bank, inventory, worn);
 		}
+		for (int itemId : requiredItems)
+		{
+			addRequiredItem(lines, itemId);
+		}
 
 		List<BankSupplyLine> result = new ArrayList<>();
 		Set<String> wornSlots = new HashSet<>();
@@ -125,6 +129,37 @@ public class SupplyPlanner
 				line.itemIds, where, line.equipmentSlot, wear, line.noted));
 		}
 		return result;
+	}
+
+	/** Adds an item Shortest Path explicitly says the route needs to pick up. */
+	private void addRequiredItem(Map<String, MutableLine> lines, int itemId)
+	{
+		ItemComposition def = itemManager.getItemComposition(itemId);
+		if (def == null)
+		{
+			return;
+		}
+		int id = itemId;
+		if (def.getNote() != 0 && def.getLinkedNoteId() > 0)
+		{
+			id = def.getLinkedNoteId();
+			def = itemManager.getItemComposition(id);
+		}
+		for (MutableLine line : lines.values())
+		{
+			for (int existing : line.itemIds)
+			{
+				if (existing == id)
+				{
+					return;
+				}
+			}
+		}
+		String name = def.getName();
+		String lower = name.toLowerCase(Locale.ROOT);
+		SupplyGroup group = lower.endsWith("rune") || lower.contains(" rune")
+			? SupplyGroup.RUNES : SupplyGroup.TRAVEL;
+		add(lines, group, name, 1, new int[]{id}, false);
 	}
 
 	private void addTransport(String display, Map<String, MutableLine> lines, ItemContainer bank,

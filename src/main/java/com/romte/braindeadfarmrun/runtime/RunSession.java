@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -106,6 +107,17 @@ public class RunSession
 			all.addAll(shortestPath.transportsFor(i));
 		}
 		return all;
+	}
+
+	public List<Integer> allRequiredItems()
+	{
+		LinkedHashSet<Integer> all = new LinkedHashSet<>();
+		List<PatchDefinition> current = route;
+		for (int i = 0; i < current.size(); i++)
+		{
+			all.addAll(shortestPath.missingItemsFor(i));
+		}
+		return new ArrayList<>(all);
 	}
 
 	public void stop()
