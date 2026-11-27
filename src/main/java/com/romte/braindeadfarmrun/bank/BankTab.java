@@ -81,6 +81,7 @@ public class BankTab
 	private static final Color IN_STORAGE = new Color(232, 197, 58);
 	private static final Color MISSING = new Color(224, 85, 85);
 	private static final Color WEAR = new Color(170, 215, 255);
+	private static final Color NOTED = new Color(205, 205, 205);
 	private static final String REST_OF_BANK = "Everything else";
 	private static final String TITLE = "Tab <col=ff0000>Farm run</col>";
 
@@ -565,6 +566,19 @@ public class BankTab
 	private int drawSection(Widget itemContainer, List<BankSupplyLine> lines, int height,
 		int[] nextWidget, List<PendingText> pending, ItemContainer bank, ItemContainer inventory)
 	{
+		boolean hasNoted = false;
+		for (BankSupplyLine line : lines)
+		{
+			if (line.noted)
+			{
+				hasNoted = true;
+				break;
+			}
+		}
+		if (hasNoted)
+		{
+			height += 12; // room for the "noted" label above the first row
+		}
 		int added = 0;
 		for (BankSupplyLine line : lines)
 		{
@@ -576,6 +590,10 @@ public class BankTab
 			drawItem(widget, displayItem(line, bank), bank, line);
 			placeItem(widget, added++, height, PLANNED_ROW_SPACING);
 			pending.add(neededText(widget, line));
+			if (line.noted)
+			{
+				pending.add(notedText(widget));
+			}
 			if (line.wear && count(inventory, line.itemIds) > 0)
 			{
 				pending.add(wearText(widget));
@@ -835,8 +853,7 @@ public class BankTab
 
 	private PendingText neededText(Widget widget, BankSupplyLine line)
 	{
-		String needed = QuantityFormatter.quantityToStackSize(line.need)
-			+ (line.noted ? " noted" : "");
+		String needed = QuantityFormatter.quantityToStackSize(line.need);
 		int x = widget.getOriginalX() - 5;
 		int y = widget.getOriginalY() + ITEM_HEIGHT + 1;
 		int inBank = count(client.getItemContainer(InventoryID.BANK), line.itemIds);
@@ -861,6 +878,12 @@ public class BankTab
 			sprite = CROSS_SPRITE;
 		}
 		return new PendingText(needed, colour.getRGB(), x, y, sprite);
+	}
+
+	private static PendingText notedText(Widget widget)
+	{
+		return new PendingText("noted", NOTED.getRGB(), widget.getOriginalX() + 2,
+			widget.getOriginalY() - 11, -1);
 	}
 
 	private static PendingText wearText(Widget widget)
