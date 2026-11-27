@@ -14,6 +14,8 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -62,7 +64,9 @@ class BraindeadFarmRunPanel extends PluginPanel
 	private final JCheckBox fruitTrees = checkbox("Fruit trees", true);
 	private final JCheckBox allotments = checkbox("Allotments", true);
 	private final JCheckBox bottomless = checkbox("Bottomless compost bucket", true);
-	private final JLabel status = new JLabel("Select runs and press START RUN.");
+	private final JLabel status = new JLabel();
+	private Font bankWarningBase;
+	private float bankWarningSize = 13f;
 	private final JLabel bankWarning = new JLabel("To start, open your bank first.");
 	private final JTextArea runText = new JTextArea();
 	private final Timer preparingTimer = new Timer(300, event -> animatePreparing());
@@ -117,7 +121,16 @@ class BraindeadFarmRunPanel extends PluginPanel
 		addSetup(c, centeredRow(startButton), 14, 0, 0, 0);
 
 		bankWarning.setForeground(new Color(220, 60, 60));
-		bankWarning.setFont(bankWarning.getFont().deriveFont(Font.BOLD, 13f));
+		bankWarningBase = bankWarning.getFont().deriveFont(Font.BOLD);
+		bankWarning.setFont(bankWarningBase.deriveFont(bankWarningSize));
+		bankWarning.addComponentListener(new ComponentAdapter()
+		{
+			@Override
+			public void componentResized(ComponentEvent event)
+			{
+				fitBankWarning();
+			}
+		});
 		addSetup(c, bankWarning, 4, 0, 0, 0);
 
 		addSetup(c, section("Runs"), 14, 0, 0, 0);
@@ -138,6 +151,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		updateSelection();
 
 		status.setForeground(TEXT);
+		status.setVisible(false);
 		addSetup(c, status, 12, 0, 0, 0);
 		addSetup(c, separator(), 12, 0, 0, 0);
 		addSetup(c, section("Settings"), 8, 0, 0, 0);
@@ -170,6 +184,44 @@ class BraindeadFarmRunPanel extends PluginPanel
 		row.setOpaque(false);
 		row.add(button);
 		return row;
+	}
+
+	private void fitBankWarning()
+	{
+		int available = bankWarning.getWidth() - bankWarning.getInsets().left
+			- bankWarning.getInsets().right;
+		if (available <= 0)
+		{
+			return;
+		}
+		float size = 13f;
+		while (size < 24f)
+		{
+			float next = size + 0.5f;
+			if (bankWarning.getFontMetrics(bankWarningBase.deriveFont(next))
+				.stringWidth(bankWarning.getText()) > available)
+			{
+				break;
+			}
+			size = next;
+		}
+		if (Math.abs(size - bankWarningSize) >= 0.25f)
+		{
+			bankWarningSize = size;
+			bankWarning.setFont(bankWarningBase.deriveFont(size));
+		}
+	}
+
+	private void setStatus(String text)
+	{
+		boolean visible = text != null && !text.isEmpty();
+		status.setText(visible ? text : "");
+		if (status.isVisible() != visible)
+		{
+			status.setVisible(visible);
+			setup.revalidate();
+			setup.repaint();
+		}
 	}
 
 	private void buildRun()
@@ -262,17 +314,16 @@ class BraindeadFarmRunPanel extends PluginPanel
 		}
 		if (!bankKnown.getAsBoolean())
 		{
-			status.setText("To start, open your bank first.");
 			return;
 		}
 
 		Set<PatchType> types = selectedTypes();
 		if (types.isEmpty())
 		{
-			status.setText("Select at least one run type.");
+			setStatus("Select at least one run type.");
 			return;
 		}
-		status.setText("Creating route...");
+		setStatus("");
 		startButton.setEnabled(false);
 		setSetupEnabled(false);
 		startPreparingAnimation();
@@ -332,9 +383,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 				startButton.setText("START RUN");
 				if (!active)
 				{
-					status.setText(wasRun
-						? "Run finished. Select runs and press START RUN."
-						: "Select runs and press START RUN.");
+					setStatus("");
 				}
 			}
 			if (active && !preparing)
@@ -377,7 +426,6 @@ class BraindeadFarmRunPanel extends PluginPanel
 		preparingDots = (preparingDots + 1) % 4;
 		String dots = ".".repeat(preparingDots);
 		startButton.setText("CREATING ROUTE" + dots);
-		status.setText("Creating route" + dots);
 	}
 
 	private void updateRunText()
