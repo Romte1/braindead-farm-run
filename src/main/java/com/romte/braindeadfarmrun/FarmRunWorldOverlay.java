@@ -15,10 +15,13 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
 import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -141,12 +144,12 @@ public class FarmRunWorldOverlay extends Overlay
 		{
 			return;
 		}
-		int[] itemIds = supplyPlanner.itemIdsFor(itemName);
-		if (itemIds.length == 0)
+		int itemId = itemIdForName(itemName);
+		if (itemId <= 0)
 		{
 			return;
 		}
-		BufferedImage image = itemManager.getImage(itemIds[0], 1, false);
+		BufferedImage image = itemManager.getImage(itemId, 1, false);
 		if (image == null)
 		{
 			return;
@@ -164,6 +167,28 @@ public class FarmRunWorldOverlay extends Overlay
 		}
 		graphics.drawImage(image, bounds.x + bounds.width / 2 - image.getWidth() / 2,
 			bounds.y + bounds.height / 2 - image.getHeight() / 2, null);
+	}
+
+	private int itemIdForName(String name)
+	{
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		if (inventory != null && inventory.getItems() != null)
+		{
+			for (Item item : inventory.getItems())
+			{
+				if (item.getId() <= 0)
+				{
+					continue;
+				}
+				int canonical = itemManager.canonicalize(item.getId());
+				if (name.equalsIgnoreCase(itemManager.getItemComposition(canonical).getName()))
+				{
+					return canonical;
+				}
+			}
+		}
+		int[] ids = supplyPlanner.itemIdsFor(name);
+		return ids.length == 0 ? -1 : ids[0];
 	}
 
 	private Polygon tileOf(LocalPoint local)

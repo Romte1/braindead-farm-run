@@ -1,6 +1,5 @@
 package com.romte.braindeadfarmrun;
 
-import com.romte.braindeadfarmrun.bank.SupplyPlanner;
 import com.romte.braindeadfarmrun.runtime.RunSession;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -21,14 +20,12 @@ public class InventoryActionOverlay extends WidgetItemOverlay
 	private static final Color FILL = new Color(51, 187, 51, 65);
 
 	private final RunSession runSession;
-	private final SupplyPlanner supplyPlanner;
 	private final ItemManager itemManager;
 
 	@Inject
-	InventoryActionOverlay(RunSession runSession, SupplyPlanner supplyPlanner, ItemManager itemManager)
+	InventoryActionOverlay(RunSession runSession, ItemManager itemManager)
 	{
 		this.runSession = runSession;
-		this.supplyPlanner = supplyPlanner;
 		this.itemManager = itemManager;
 		showOnInventory();
 	}
@@ -42,16 +39,7 @@ public class InventoryActionOverlay extends WidgetItemOverlay
 			return;
 		}
 		int canonical = itemManager.canonicalize(itemId);
-		boolean matches = false;
-		for (int id : supplyPlanner.itemIdsFor(required))
-		{
-			if (id == canonical)
-			{
-				matches = true;
-				break;
-			}
-		}
-		if (!matches)
+		if (!required.equalsIgnoreCase(itemManager.getItemComposition(canonical).getName()))
 		{
 			return;
 		}
