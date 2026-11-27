@@ -85,6 +85,9 @@ public class BraindeadFarmRunPlugin extends Plugin
 	private InventoryWearOverlay inventoryWearOverlay;
 
 	@Inject
+	private InventoryActionOverlay inventoryActionOverlay;
+
+	@Inject
 	private FarmRunWorldOverlay worldOverlay;
 
 	@Inject
@@ -114,6 +117,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		bankTab.setEnabled(true);
 		overlayManager.add(infoOverlay);
 		overlayManager.add(inventoryWearOverlay);
+		overlayManager.add(inventoryActionOverlay);
 		overlayManager.add(worldOverlay);
 		overlayManager.add(minimapOverlay);
 		clientThread.invokeLater(supplyPlanner::refreshQuestState);
@@ -145,6 +149,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		runSession.stop();
 		overlayManager.remove(infoOverlay);
 		overlayManager.remove(inventoryWearOverlay);
+		overlayManager.remove(inventoryActionOverlay);
 		overlayManager.remove(worldOverlay);
 		overlayManager.remove(minimapOverlay);
 		bankTab.shutDown();

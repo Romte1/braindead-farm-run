@@ -1,5 +1,6 @@
 package com.romte.braindeadfarmrun;
 
+import com.romte.braindeadfarmrun.bank.SupplyPlanner;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.runtime.PatchTracker;
 import com.romte.braindeadfarmrun.runtime.RunSession;
@@ -9,6 +10,7 @@ import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Shape;
+import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
@@ -17,6 +19,7 @@ import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -39,15 +42,19 @@ public class FarmRunWorldOverlay extends Overlay
 	private final RunSession runSession;
 	private final PatchTracker patchTracker;
 	private final ModelOutlineRenderer outlineRenderer;
+	private final SupplyPlanner supplyPlanner;
+	private final ItemManager itemManager;
 
 	@Inject
 	FarmRunWorldOverlay(Client client, RunSession runSession, PatchTracker patchTracker,
-		ModelOutlineRenderer outlineRenderer)
+		ModelOutlineRenderer outlineRenderer, SupplyPlanner supplyPlanner, ItemManager itemManager)
 	{
 		this.client = client;
 		this.runSession = runSession;
 		this.patchTracker = patchTracker;
 		this.outlineRenderer = outlineRenderer;
+		this.supplyPlanner = supplyPlanner;
+		this.itemManager = itemManager;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
@@ -72,6 +79,7 @@ public class FarmRunWorldOverlay extends Overlay
 			if (farmer != null)
 			{
 				outlineRenderer.drawOutline(farmer, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
+				drawActionItem(graphics, farmer.getConvexHull(), farmer.getLocalLocation());
 				if (showArrow)
 				{
 					drawArrowOverNpc(graphics, farmer);
@@ -84,6 +92,7 @@ public class FarmRunWorldOverlay extends Overlay
 		if (object != null)
 		{
 			outlineRenderer.drawOutline(object, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
+			drawActionItem(graphics, object.getClickbox(), object.getLocalLocation());
 			if (showArrow)
 			{
 				drawArrowOverObject(graphics, object);
@@ -93,6 +102,7 @@ public class FarmRunWorldOverlay extends Overlay
 
 		WorldPoint point = new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
 		LocalPoint local = LocalPoint.fromWorld(client.getTopLevelWorldView(), point);
+		drawActionItem(graphics, null, local);
 		drawTileGuide(graphics, local, showArrow);
 		return null;
 	}
@@ -122,6 +132,38 @@ public class FarmRunWorldOverlay extends Overlay
 			return;
 		}
 		drawArrowAbove(graphics, object.getConvexHull());
+	}
+
+	private void drawActionItem(Graphics2D graphics, Shape shape, LocalPoint local)
+	{
+		String itemName = runSession.currentItemName();
+		if (itemName == null)
+		{
+			return;
+		}
+		int[] itemIds = supplyPlanner.itemIdsFor(itemName);
+		if (itemIds.length == 0)
+		{
+			return;
+		}
+		BufferedImage image = itemManager.getImage(itemIds[0], 1, false);
+		if (image == null)
+		{
+			return;
+		}
+
+		Rectangle bounds = shape == null ? null : shape.getBounds();
+		if (bounds == null || bounds.width <= 0 || bounds.height <= 0)
+		{
+			Polygon tile = tileOf(local);
+			bounds = tile == null ? null : tile.getBounds();
+		}
+		if (bounds == null)
+		{
+			return;
+		}
+		graphics.drawImage(image, bounds.x + bounds.width / 2 - image.getWidth() / 2,
+			bounds.y + bounds.height / 2 - image.getHeight() / 2, null);
 	}
 
 	private Polygon tileOf(LocalPoint local)

@@ -187,6 +187,16 @@ public class SupplyPlanner
 		return result;
 	}
 
+	/** Resolves an item name for the current-step overlays. */
+	public int[] itemIdsFor(String name)
+	{
+		if (name == null || name.isEmpty())
+		{
+			return new int[0];
+		}
+		return resolve(name).clone();
+	}
+
 	/** Adds an item Shortest Path explicitly says the route needs to pick up. */
 	private void addRequiredItem(Map<String, MutableLine> lines, Map<String, Integer> runeNeeds,
 		int itemId)

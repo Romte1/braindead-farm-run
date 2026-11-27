@@ -167,6 +167,23 @@ final class StopGuide
 		return phase;
 	}
 
+	/** Item the current step needs the player to use, or null when the step is not item-based. */
+	String currentItemName()
+	{
+		switch (phase)
+		{
+			case PLANT:
+				return initialCrop == null ? null : initialCrop.getPlantedItemName();
+			case PAY:
+				return initialCrop != null && initialCrop.needsPayment()
+					? initialCrop.getPaymentItem() : null;
+			case REMOVE:
+				return farmerRemoval ? "Coins" : "Spade";
+			default:
+				return null;
+		}
+	}
+
 	/** True when the next click belongs on the farmer rather than on the patch itself. */
 	boolean isFarmerTarget()
 	{

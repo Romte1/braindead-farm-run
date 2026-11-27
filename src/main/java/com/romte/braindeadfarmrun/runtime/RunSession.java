@@ -369,6 +369,12 @@ public class RunSession
 		return active && atStop && guide != null && guide.isFarmerTarget();
 	}
 
+	/** Item the current checklist action needs, or null. */
+	public String currentItemName()
+	{
+		return active && guide != null ? guide.currentItemName() : null;
+	}
+
 	public int remainingStops()
 	{
 		List<PatchDefinition> current = route;
