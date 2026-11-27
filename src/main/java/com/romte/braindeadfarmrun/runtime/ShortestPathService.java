@@ -3,7 +3,6 @@ package com.romte.braindeadfarmrun.runtime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,12 +71,11 @@ public class ShortestPathService
 
 	public List<String> allTransports()
 	{
-		LinkedHashSet<String> unique = new LinkedHashSet<>();
-		for (QueryResult result : results.values())
+		List<String> result = new ArrayList<>();
+		for (QueryResult queryResult : results.values())
 		{
-			unique.addAll(result.transports);
+			result.addAll(queryResult.transports);
 		}
-		List<String> result = new ArrayList<>(unique);
 		Collections.sort(result);
 		return result;
 	}

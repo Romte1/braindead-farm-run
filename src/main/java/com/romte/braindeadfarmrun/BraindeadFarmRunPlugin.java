@@ -24,6 +24,7 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.PluginMessage;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -141,6 +142,16 @@ public class BraindeadFarmRunPlugin extends Plugin
 		{
 			questTicks = 0;
 			clientThread.invokeLater(supplyPlanner::refreshQuestState);
+		}
+	}
+
+	@Subscribe
+	public void onPluginMessage(PluginMessage event)
+	{
+		if ("shortestpath".equals(event.getNamespace()) && "result".equals(event.getName()))
+		{
+			// The bank tab now plans travel items, so refresh it as soon as a route result arrives.
+			clientThread.invokeLater(bankTab::refresh);
 		}
 	}
 
