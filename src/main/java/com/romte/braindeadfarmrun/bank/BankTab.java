@@ -2,7 +2,6 @@ package com.romte.braindeadfarmrun.bank;
 
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -92,7 +91,6 @@ public class BankTab
 	private final BankTabButtonOverlay overlay;
 	private final List<Widget> addedWidgets = new ArrayList<>();
 	private final Map<Widget, BankSupplyLine> lineByWidget = new HashMap<>();
-	private int originalContainerChildren = -1;
 	private volatile Supplier<List<BankSupplyLine>> plan = Collections::emptyList;
 	private volatile List<BankSupplyLine> cachedPlan = Collections.emptyList();
 	private volatile boolean planDirty = true;
@@ -218,7 +216,6 @@ public class BankTab
 		{
 			lastScrollHeight = -1;
 			lastScroll = -1;
-			originalContainerChildren = -1;
 			addedWidgets.clear();
 			lineByWidget.clear();
 			if (runActive)
@@ -291,16 +288,15 @@ public class BankTab
 		{
 			return;
 		}
-		ensureOriginalChildren(itemContainer);
-		removeAddedWidgets();
-		if (!button.isActive())
-		{
-			return;
-		}
-		computePlanIfDirty();
 		layingOut = true;
 		try
 		{
+			removeAddedWidgets();
+			if (!button.isActive())
+			{
+				return;
+			}
+			computePlanIfDirty();
 			layOut(itemContainer, itemContainer.getDynamicChildren(), cachedPlan);
 		}
 		finally
@@ -354,30 +350,16 @@ public class BankTab
 		{
 			return;
 		}
-		ensureOriginalChildren(itemContainer);
-		computePlanIfDirty();
 		layingOut = true;
 		try
 		{
 			removeAddedWidgets();
+			computePlanIfDirty();
 			layOut(itemContainer, itemContainer.getDynamicChildren(), cachedPlan);
 		}
 		finally
 		{
 			layingOut = false;
-		}
-	}
-
-	private void ensureOriginalChildren(Widget itemContainer)
-	{
-		if (originalContainerChildren != -1)
-		{
-			return;
-		}
-		Widget[] children = itemContainer.getChildren();
-		if (children != null)
-		{
-			originalContainerChildren = children.length;
 		}
 	}
 
@@ -840,14 +822,22 @@ public class BankTab
 
 	private void removeAddedWidgets()
 	{
-		if (originalContainerChildren == -1 || addedWidgets.isEmpty())
+		if (addedWidgets.isEmpty())
 		{
 			return;
 		}
 		Widget parent = addedWidgets.get(0).getParent();
 		if (parent != null && parent.getChildren() != null)
 		{
-			parent.setChildren(Arrays.copyOf(parent.getChildren(), originalContainerChildren));
+			List<Widget> kept = new ArrayList<>();
+			for (Widget child : parent.getChildren())
+			{
+				if (child != null && !addedWidgets.contains(child))
+				{
+					kept.add(child);
+				}
+			}
+			parent.setChildren(kept.toArray(new Widget[0]));
 			parent.revalidate();
 		}
 		addedWidgets.clear();
