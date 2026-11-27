@@ -20,7 +20,11 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetModelType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
@@ -35,6 +39,14 @@ public class RunSession
 {
 	private static final int ARRIVAL_RADIUS = 6;
 	private static final String PREFIX = "<col=00bfff>Braindead Farm Run:</col> ";
+	private static final String FALADOR_DIARY_TEXT = "The gardener protects your tree for you, "
+		+ "free of charge, as a token of gratitude for completing the Falador elite diary.";
+	private static final Set<String> PAYMENT_TEXT = Set.of(
+		"That'll do nicely, sir. Leave it with me - I'll make sure<br>that patch grows for you.",
+		"That'll do nicely, madam. Leave it with me - I'll make<br>sure that patch grows for you.",
+		"That'll do nicely. Leave it with me - I'll make sure that<br>patch grows for you.",
+		"That'll do nicely, iknami. Leave it with me - I'll make<br>sure that patch grows for you.",
+		"Alright, leave it with me. I'll look after that nursery for<br>you.");
 
 	private final Client client;
 	private final ClientThread clientThread;
@@ -50,6 +62,8 @@ public class RunSession
 	private volatile boolean routeReady;
 	private volatile boolean atStop;
 	private volatile List<String> currentTasks = Collections.emptyList();
+	private StopGuide guide;
+	private int completeTicks;
 	private WorldPoint lastTarget;
 
 	@Inject
@@ -113,38 +127,50 @@ public class RunSession
 		return currentTasks;
 	}
 
-	private void updateCurrentTasks()
+	private void beginStop()
 	{
 		if (!active || index >= route.size())
+		{
+			guide = null;
+			currentTasks = Collections.emptyList();
+			return;
+		}
+		PatchDefinition patch = route.get(index);
+		PatchState state = patchTracker.snapshot().get(patch.getId());
+		guide = new StopGuide(patch, state, patchTracker.isProtected(patch));
+		updateCurrentTasks();
+	}
+
+	private void updateCurrentTasks()
+	{
+		if (!active || index >= route.size() || guide == null)
 		{
 			currentTasks = Collections.emptyList();
 			return;
 		}
 		PatchDefinition patch = route.get(index);
 		PatchState state = patchTracker.snapshot().get(patch.getId());
-		currentTasks = Collections.unmodifiableList(StopTasks.forPatch(patch, state));
+		guide.update(state, patchTracker.isProtected(patch));
+		currentTasks = Collections.unmodifiableList(guide.stepLines());
 	}
 
-	/** Finish the current stop and display the next leg. */
-	public void nextStop()
+	private void advanceStop()
 	{
-		clientThread.invokeLater(() ->
+		if (!active || index >= route.size())
 		{
-			if (!active || !atStop || index >= route.size())
-			{
-				return;
-			}
-			atStop = false;
-			index++;
-			updateCurrentTasks();
-			if (index >= route.size())
-			{
-				finish();
-				return;
-			}
-			sendCurrentTarget();
-			queryStops(index, point(route.get(index - 1)));
-		});
+			return;
+		}
+		atStop = false;
+		completeTicks = 0;
+		index++;
+		if (index >= route.size())
+		{
+			finish();
+			return;
+		}
+		beginStop();
+		sendCurrentTarget();
+		queryStops(index, point(route.get(index - 1)));
 	}
 
 	public List<String> teleportsFor(int stopIndex)
@@ -353,9 +379,52 @@ public class RunSession
 			&& distance(location.getX(), location.getY(), target.getX(), target.getY()) <= ARRIVAL_RADIUS)
 		{
 			atStop = true;
-			message("At " + target.getDisplayName() + ". Complete the steps, then press NEXT STOP.");
+			message("At " + target.getDisplayName()
+				+ ". The next stop opens automatically when the steps are done.");
 		}
 		updateCurrentTasks();
+		detectPayment();
+		if (atStop && guide != null && guide.isComplete())
+		{
+			if (++completeTicks >= 3)
+			{
+				advanceStop();
+			}
+		}
+		else
+		{
+			completeTicks = 0;
+		}
+	}
+
+	private void detectPayment()
+	{
+		if (!atStop || guide == null || guide.isComplete())
+		{
+			return;
+		}
+		Widget text = client.getWidget(InterfaceID.ChatLeft.TEXT);
+		if (text == null || !PAYMENT_TEXT.contains(text.getText()))
+		{
+			return;
+		}
+		Widget head = client.getWidget(InterfaceID.ChatLeft.HEAD);
+		if (head != null && head.getModelType() == WidgetModelType.NPC_CHATHEAD)
+		{
+			guide.onPayment();
+			updateCurrentTasks();
+		}
+	}
+
+	@Subscribe
+	public void onChatMessage(ChatMessage event)
+	{
+		if (event.getType() == ChatMessageType.GAMEMESSAGE && atStop && guide != null
+			&& FALADOR_DIARY_TEXT.equals(event.getMessage()))
+		{
+			guide.onPayment();
+			updateCurrentTasks();
+		}
 	}
 
 	private void startOnClientThread(Set<PatchType> types)
@@ -390,7 +459,7 @@ public class RunSession
 		active = true;
 		atStop = false;
 		routeReady = false;
-		updateCurrentTasks();
+		beginStop();
 		message("Route started: " + route.size() + " stops.");
 		message("Withdraw the bank tab supplies, then close the bank.");
 
@@ -420,6 +489,8 @@ public class RunSession
 		preparing = false;
 		routeReady = false;
 		atStop = false;
+		guide = null;
+		completeTicks = 0;
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
 		index = 0;
@@ -437,6 +508,8 @@ public class RunSession
 		preparing = false;
 		routeReady = false;
 		atStop = false;
+		guide = null;
+		completeTicks = 0;
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
 		index = 0;

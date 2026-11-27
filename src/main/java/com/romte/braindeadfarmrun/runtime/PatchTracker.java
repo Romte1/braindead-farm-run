@@ -99,6 +99,14 @@ public class PatchTracker
 		return Collections.unmodifiableMap(new HashMap<>(states));
 	}
 
+	/** Time Tracking stores whether the farmer is protecting this patch. */
+	public boolean isProtected(PatchDefinition patch)
+	{
+		String key = patch.getRegionId() + "." + patch.getVarbit() + ".protected";
+		return Boolean.TRUE.equals(configManager.getRSProfileConfiguration("timetracking", key,
+			Boolean.class));
+	}
+
 	@Subscribe
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{

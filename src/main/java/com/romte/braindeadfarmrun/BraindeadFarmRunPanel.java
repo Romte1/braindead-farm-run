@@ -53,7 +53,6 @@ class BraindeadFarmRunPanel extends PluginPanel
 	private final JPanel run = new JPanel(new BorderLayout());
 	private final JButton startButton = new JButton("START RUN");
 	private final JButton stopButton = new JButton("STOP RUN");
-	private final JButton nextStopButton = new JButton("NEXT STOP");
 	private final JCheckBox herbs = checkbox("Herbs", true);
 	private final JCheckBox trees = checkbox("Trees", true);
 	private final JCheckBox fruitTrees = checkbox("Fruit trees", true);
@@ -170,11 +169,6 @@ class BraindeadFarmRunPanel extends PluginPanel
 		styleButton(stopButton, STOP, STOP_BORDER);
 		stopButton.addActionListener(event -> session.stop());
 		header.add(stopButton);
-		styleButton(nextStopButton, new Color(30, 110, 170), new Color(18, 70, 110));
-		nextStopButton.setEnabled(false);
-		nextStopButton.addActionListener(event -> session.nextStop());
-		header.add(Box.createVerticalStrut(6));
-		header.add(nextStopButton);
 		run.add(header, BorderLayout.NORTH);
 
 		runText.setEditable(false);
@@ -299,8 +293,6 @@ class BraindeadFarmRunPanel extends PluginPanel
 			boolean known = bankKnown.getAsBoolean();
 			bankWarning.setVisible(!known);
 			boolean showRun = active && !preparing;
-			nextStopButton.setEnabled(active && !preparing && session.isAtStop());
-			nextStopButton.setText(session.isAtStop() ? "DONE / NEXT STOP" : "NEXT STOP");
 			if (showRun != wasRun)
 			{
 				cards.show(root, showRun ? "run" : "setup");
