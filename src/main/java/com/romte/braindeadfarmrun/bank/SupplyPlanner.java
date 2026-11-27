@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.EnumComposition;
 import net.runelite.api.EnumID;
@@ -33,6 +34,7 @@ import net.runelite.http.api.item.ItemPrice;
  * and the best compost choice. Counts are compared against the bank, inventory and worn
  * equipment.
  */
+@Slf4j
 @Singleton
 public class SupplyPlanner
 {
@@ -84,6 +86,8 @@ public class SupplyPlanner
 		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
+		log.debug("Supply plan starting: types={} transports={} required={}", types.size(),
+			transports.size(), requiredItems.size());
 
 		Map<String, MutableLine> lines = new LinkedHashMap<>();
 		Map<String, Integer> runeNeeds = new LinkedHashMap<>();
@@ -113,6 +117,7 @@ public class SupplyPlanner
 				new int[]{ItemID.SECATEURS}, false);
 		}
 		addCompost(lines, bank, inventory, worn);
+		log.debug("Supply plan tools done: {} lines", lines.size());
 
 		for (PatchType type : types)
 		{
@@ -134,6 +139,7 @@ public class SupplyPlanner
 			}
 		}
 
+		log.debug("Supply plan crops done: {} lines, {} rune needs", lines.size(), runeNeeds.size());
 		for (String transport : transports)
 		{
 			addTransport(transport, lines, runeNeeds);
@@ -142,7 +148,9 @@ public class SupplyPlanner
 		{
 			addRequiredItem(lines, runeNeeds, itemId);
 		}
+		log.debug("Supply plan transports done: {} lines, {} rune needs", lines.size(), runeNeeds.size());
 		planRunes(lines, runeNeeds, bank, inventory, worn);
+		log.debug("Supply plan runes done: {} lines, {} rune needs", lines.size(), runeNeeds.size());
 		for (MutableLine line : lines.values())
 		{
 			if (line.uses > 0)
@@ -164,6 +172,7 @@ public class SupplyPlanner
 			result.add(new BankSupplyLine(line.group, line.name, line.need, have, carried,
 				line.itemIds, where, line.equipmentSlot, wear, line.noted, line.details));
 		}
+		log.debug("Supply plan finished: {} lines", result.size());
 		return result;
 	}
 

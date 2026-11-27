@@ -268,6 +268,8 @@ public class BankTab
 		{
 			return;
 		}
+		log.debug("Bank tab build finished: active={} runActive={} enabled={}",
+			button.isActive(), runActive, enabled);
 		if (!runActive)
 		{
 			removeAddedWidgets();
@@ -343,6 +345,8 @@ public class BankTab
 	{
 		if (!runActive || !button.isActive() || layingOut)
 		{
+			log.debug("Bank tab refresh skipped: runActive={} active={} layingOut={}",
+				runActive, button.isActive(), layingOut);
 			return;
 		}
 		Widget itemContainer = client.getWidget(InterfaceID.Bankmain.ITEMS);
@@ -369,6 +373,7 @@ public class BankTab
 		{
 			return;
 		}
+		log.debug("Bank tab plan computation starting");
 		List<BankSupplyLine> computed = plan.get();
 		if (computed == null)
 		{
@@ -381,6 +386,9 @@ public class BankTab
 
 	private void layOut(Widget itemContainer, Widget[] itemWidgets, List<BankSupplyLine> lines)
 	{
+		log.debug("Bank tab layout starting: planned={} children={} dynamic={}", lines.size(),
+			itemContainer.getChildren() == null ? -1 : itemContainer.getChildren().length,
+			itemWidgets == null ? -1 : itemWidgets.length);
 		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		if (bank == null)
@@ -469,6 +477,8 @@ public class BankTab
 			}
 		}
 
+		log.debug("Bank tab layout sections done: equip={} inventory={} rest={} height={}",
+			equipment.size(), inventoryLines.size(), rest.size(), height);
 		int scrollHeight = Math.max(height, itemContainer.getHeight());
 		itemContainer.setScrollHeight(scrollHeight);
 		int scroll = itemContainer.getScrollY();
