@@ -96,6 +96,7 @@ public class BankTab
 	private final Map<Widget, BankSupplyLine> lineByWidget = new HashMap<>();
 	private volatile Supplier<List<BankSupplyLine>> plan = Collections::emptyList;
 	private volatile List<BankSupplyLine> cachedPlan = Collections.emptyList();
+	private volatile Set<Integer> wearItemIds = Collections.emptySet();
 	private volatile boolean planDirty = true;
 	private volatile boolean planComputed;
 	private volatile boolean buttonUnlocked;
@@ -159,6 +160,7 @@ public class BankTab
 		if (!active)
 		{
 			cachedPlan = Collections.emptyList();
+			wearItemIds = Collections.emptySet();
 			buttonUnlocked = false;
 		}
 		clientThread.invokeLater(() ->
@@ -180,11 +182,18 @@ public class BankTab
 	{
 		planDirty = true;
 		planComputed = false;
+		wearItemIds = Collections.emptySet();
 	}
 
 	public boolean hasPlan()
 	{
 		return planComputed;
+	}
+
+	/** Item ids of the primary equipment pieces the run wants the player to wear. */
+	public Set<Integer> wearItemIds()
+	{
+		return wearItemIds;
 	}
 
 	/** Reveal the bank-tab button only after the complete route and supply plan exist. */
@@ -440,6 +449,18 @@ public class BankTab
 				return; // route results are still arriving
 			}
 			cachedPlan = computed;
+			Set<Integer> wearIds = new HashSet<>();
+			for (BankSupplyLine line : computed)
+			{
+				if (line.wear)
+				{
+					for (int id : line.itemIds)
+					{
+						wearIds.add(id);
+					}
+				}
+			}
+			wearItemIds = Collections.unmodifiableSet(wearIds);
 			planDirty = false;
 			planComputed = true;
 			log.debug("Bank tab plan computed: {} lines", cachedPlan.size());
@@ -453,7 +474,6 @@ public class BankTab
 			itemContainer.getChildren() == null ? -1 : itemContainer.getChildren().length,
 			itemWidgets == null ? -1 : itemWidgets.length);
 		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
-		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		if (bank == null)
 		{
 			return;
@@ -502,12 +522,12 @@ public class BankTab
 		if (!equipment.isEmpty())
 		{
 			height = addHeader(itemContainer, "To Equip", height);
-			height = drawSection(itemContainer, equipment, height, nextWidget, pending, bank, inventory);
+			height = drawSection(itemContainer, equipment, height, nextWidget, pending, bank);
 		}
 		if (!inventoryLines.isEmpty())
 		{
 			height = addHeader(itemContainer, "Inventory", height);
-			height = drawSection(itemContainer, inventoryLines, height, nextWidget, pending, bank, inventory);
+			height = drawSection(itemContainer, inventoryLines, height, nextWidget, pending, bank);
 		}
 
 		if (!rest.isEmpty())
@@ -565,21 +585,8 @@ public class BankTab
 	}
 
 	private int drawSection(Widget itemContainer, List<BankSupplyLine> lines, int height,
-		int[] nextWidget, List<PendingText> pending, ItemContainer bank, ItemContainer inventory)
+		int[] nextWidget, List<PendingText> pending, ItemContainer bank)
 	{
-		boolean hasNoted = false;
-		for (BankSupplyLine line : lines)
-		{
-			if (line.noted)
-			{
-				hasNoted = true;
-				break;
-			}
-		}
-		if (hasNoted)
-		{
-			height += 12; // room for the "noted" label above the first row
-		}
 		int added = 0;
 		for (BankSupplyLine line : lines)
 		{
@@ -594,11 +601,6 @@ public class BankTab
 			if (line.noted)
 			{
 				pending.add(notedText(widget));
-			}
-			if (line.wear && count(inventory, line.itemIds) > 0
-				&& count(client.getItemContainer(InventoryID.WORN), line.itemIds) == 0)
-			{
-				pending.add(wearText(widget));
 			}
 		}
 		return rowsEnd(height, added, PLANNED_ROW_SPACING);
@@ -885,13 +887,7 @@ public class BankTab
 	private static PendingText notedText(Widget widget)
 	{
 		return new PendingText("noted", NOTED.getRGB(), widget.getOriginalX() + 1,
-			widget.getOriginalY() - 11, -1);
-	}
-
-	private static PendingText wearText(Widget widget)
-	{
-		return new PendingText("WEAR", WEAR.getRGB(), widget.getOriginalX() + 1,
-			widget.getOriginalY() + ITEM_HEIGHT + 16, -1);
+			widget.getOriginalY() + 9, -1);
 	}
 
 	private void showDetails(BankSupplyLine line)
