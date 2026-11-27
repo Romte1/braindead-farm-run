@@ -97,6 +97,7 @@ public class BankTab
 	private volatile boolean enabled;
 	private volatile boolean runActive;
 	private boolean layingOut;
+	private boolean planComputing;
 	private boolean scrollUpdateQueued;
 	private int lastScrollHeight = -1;
 	private int lastScroll = -1;
@@ -369,19 +370,31 @@ public class BankTab
 
 	private void computePlanIfDirty()
 	{
-		if (!planDirty)
+		if (!planDirty || planComputing)
 		{
 			return;
 		}
-		log.debug("Bank tab plan computation starting");
-		List<BankSupplyLine> computed = plan.get();
-		if (computed == null)
+		planComputing = true;
+		// Do not read the pouch/enums while the bank-building script is still on the stack;
+		// defer the plan to the next client tick and keep the tab responsive.
+		clientThread.invokeLater(() ->
 		{
-			return; // route results are still arriving
-		}
-		cachedPlan = computed;
-		planDirty = false;
-		log.debug("Bank tab plan computed: {} lines", cachedPlan.size());
+			planComputing = false;
+			if (!planDirty)
+			{
+				return;
+			}
+			log.debug("Bank tab plan computation starting");
+			List<BankSupplyLine> computed = plan.get();
+			if (computed == null)
+			{
+				return; // route results are still arriving
+			}
+			cachedPlan = computed;
+			planDirty = false;
+			log.debug("Bank tab plan computed: {} lines", cachedPlan.size());
+			refresh();
+		});
 	}
 
 	private void layOut(Widget itemContainer, Widget[] itemWidgets, List<BankSupplyLine> lines)

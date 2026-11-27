@@ -702,10 +702,13 @@ public class SupplyPlanner
 		{
 			return;
 		}
+		log.debug("planRunes: reading pouch");
 		Map<String, Integer> pouch = readRunePouch();
+		log.debug("planRunes: pouch={}", pouch);
 		int pouchId = pouchItemId(bank, inventory, worn);
 		if (pouchId > 0 && !pouch.isEmpty())
 		{
+			log.debug("planRunes: subtracting pouch");
 			boolean used = subtractPouch(runeNeeds, pouch);
 			if (used)
 			{
@@ -714,18 +717,24 @@ public class SupplyPlanner
 				setDetails(lines, SupplyGroup.TOOLS, name,
 					pouchDetails(pouch, allNeedsMet(runeNeeds)));
 			}
+			log.debug("planRunes: pouch subtracted, needs={}", runeNeeds);
 		}
+		log.debug("planRunes: using bank combinations");
 		useCombinationRunes(lines, runeNeeds, bank, inventory, worn);
+		log.debug("planRunes: combinations done, needs={}", runeNeeds);
 		for (Map.Entry<String, Integer> entry : runeNeeds.entrySet())
 		{
 			addRuneLine(lines, entry.getKey(), entry.getValue());
 		}
+		log.debug("planRunes: finished");
 	}
 
 	private Map<String, Integer> readRunePouch()
 	{
 		Map<String, Integer> runes = new LinkedHashMap<>();
+		log.debug("readRunePouch: reading enum");
 		EnumComposition runeEnum = client.getEnum(EnumID.RUNEPOUCH_RUNE);
+		log.debug("readRunePouch: enum={}", runeEnum);
 		if (runeEnum == null)
 		{
 			return runes;
@@ -734,6 +743,7 @@ public class SupplyPlanner
 		{
 			int quantity = client.getVarbitValue(RUNE_POUCH_QTY_VARBITS[i]);
 			int rune = client.getVarbitValue(RUNE_POUCH_TYPE_VARBITS[i]);
+			log.debug("readRunePouch: slot {} qty={} type={}", i, quantity, rune);
 			if (quantity <= 0 || rune < 0)
 			{
 				continue;
