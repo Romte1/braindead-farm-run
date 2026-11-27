@@ -65,24 +65,16 @@ public class FarmRunWorldOverlay extends Overlay
 			return null;
 		}
 
-		boolean showArrow = client.getGameCycle() % 4 < 2;
+		boolean showArrow = client.getTickCount() % 4 < 2;
 		if (runSession.currentTargetIsFarmer())
 		{
 			NPC farmer = patchTracker.farmerFor(patch);
 			if (farmer != null)
 			{
 				outlineRenderer.drawOutline(farmer, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
-				Shape hull = farmer.getConvexHull();
-				if (hull != null)
+				if (showArrow)
 				{
-					if (showArrow)
-					{
-						drawArrowAbove(graphics, hull);
-					}
-				}
-				else
-				{
-					drawTileGuide(graphics, farmer.getLocalLocation(), showArrow);
+					drawArrowOverNpc(graphics, farmer);
 				}
 				return null;
 			}
@@ -92,17 +84,9 @@ public class FarmRunWorldOverlay extends Overlay
 		if (object != null)
 		{
 			outlineRenderer.drawOutline(object, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
-			Shape hull = object.getConvexHull();
-			if (hull != null)
+			if (showArrow)
 			{
-				if (showArrow)
-				{
-					drawArrowAbove(graphics, hull);
-				}
-			}
-			else
-			{
-				drawTileGuide(graphics, object.getLocalLocation(), showArrow);
+				drawArrowOverObject(graphics, object);
 			}
 			return null;
 		}
@@ -113,13 +97,41 @@ public class FarmRunWorldOverlay extends Overlay
 		return null;
 	}
 
-	private void drawTileGuide(Graphics2D graphics, LocalPoint local, boolean showArrow)
+	private void drawArrowOverNpc(Graphics2D graphics, NPC npc)
 	{
-		if (local == null)
+		Shape hull = npc.getConvexHull();
+		Polygon tile = tileOf(npc.getLocalLocation());
+		int x = tile != null ? tile.getBounds().x + tile.getBounds().width / 2
+			: hull == null ? 0 : hull.getBounds().x + hull.getBounds().width / 2;
+		int y = hull != null ? hull.getBounds().y - ARROW_GAP
+			: tile == null ? 0 : tile.getBounds().y + tile.getBounds().height / 2;
+		if (x != 0 && y != 0)
 		{
+			GuideArrow.drawWorldArrow(graphics, GUIDE, x, y);
+		}
+	}
+
+	private void drawArrowOverObject(Graphics2D graphics, GameObject object)
+	{
+		Polygon tile = tileOf(object.getLocalLocation());
+		if (tile != null)
+		{
+			Rectangle bounds = tile.getBounds();
+			GuideArrow.drawWorldArrow(graphics, GUIDE, bounds.x + bounds.width / 2,
+				bounds.y + bounds.height / 2);
 			return;
 		}
-		Polygon tile = Perspective.getCanvasTilePoly(client, local, 30);
+		drawArrowAbove(graphics, object.getConvexHull());
+	}
+
+	private Polygon tileOf(LocalPoint local)
+	{
+		return local == null ? null : Perspective.getCanvasTilePoly(client, local, 30);
+	}
+
+	private void drawTileGuide(Graphics2D graphics, LocalPoint local, boolean showArrow)
+	{
+		Polygon tile = tileOf(local);
 		if (tile == null)
 		{
 			return;

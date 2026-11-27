@@ -39,7 +39,7 @@ public class FarmRunMinimapOverlay extends Overlay
 	@Override
 	public Dimension render(Graphics2D graphics)
 	{
-		if (!runSession.isActive() || client.getGameCycle() % 4 >= 2)
+		if (!runSession.isActive() || client.getTickCount() % 4 >= 2)
 		{
 			return null;
 		}
