@@ -59,7 +59,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 	private final JCheckBox allotments = checkbox("Allotments", true);
 	private final JCheckBox bottomless = checkbox("Bottomless compost bucket", true);
 	private final JLabel status = new JLabel("Select runs and press START RUN.");
-	private final JLabel bankWarning = new JLabel("Open your bank first.");
+	private final JLabel bankWarning = new JLabel("<html>To start, open<br>your bank first.</html>");
 	private final JTextArea runText = new JTextArea();
 	private final Timer preparingTimer = new Timer(300, event -> animatePreparing());
 	private int preparingDots;
@@ -108,7 +108,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		startButton.addActionListener(event -> toggle());
 		setup.add(startButton);
 		bankWarning.setForeground(new Color(220, 60, 60));
-		bankWarning.setFont(bankWarning.getFont().deriveFont(Font.BOLD, 12f));
+		bankWarning.setFont(bankWarning.getFont().deriveFont(Font.BOLD, 16f));
 		bankWarning.setAlignmentX(Component.LEFT_ALIGNMENT);
 		bankWarning.setBorder(BorderFactory.createEmptyBorder(4, 8, 0, 0));
 		setup.add(bankWarning);
@@ -240,7 +240,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		}
 		if (!bankKnown.getAsBoolean())
 		{
-			status.setText("Open your bank first.");
+			status.setText("To start, open your bank first.");
 			return;
 		}
 
