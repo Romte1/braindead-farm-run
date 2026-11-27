@@ -114,6 +114,14 @@ public class SupplyPlanner
 		{
 			addRequiredItem(lines, itemId);
 		}
+		if (usesRunes(lines)
+			&& count(bank, ItemID.DIVINE_RUNE_POUCH)
+			+ count(inventory, ItemID.DIVINE_RUNE_POUCH)
+			+ count(worn, ItemID.DIVINE_RUNE_POUCH) > 0)
+		{
+			add(lines, SupplyGroup.TOOLS, "Divine rune pouch", 1,
+				new int[]{ItemID.DIVINE_RUNE_POUCH}, false);
+		}
 
 		List<BankSupplyLine> result = new ArrayList<>();
 		Set<String> wornSlots = new HashSet<>();
@@ -419,12 +427,35 @@ public class SupplyPlanner
 
 	private void addTravel(Map<String, MutableLine> lines, String name)
 	{
-		add(lines, SupplyGroup.TRAVEL, name, 1, resolve(name), false);
+		int[] ids = resolve(name);
+		if (ids.length == 0)
+		{
+			ids = explicitIds(name);
+		}
+		add(lines, SupplyGroup.TRAVEL, name, 1, ids, false);
 	}
 
 	private void addChargedTravel(Map<String, MutableLine> lines, String name)
 	{
-		add(lines, SupplyGroup.TRAVEL, name, 1, resolveCharged(name), false);
+		int[] ids = resolveCharged(name);
+		if (ids.length == 0)
+		{
+			ids = explicitIds(name);
+		}
+		add(lines, SupplyGroup.TRAVEL, name, 1, ids, false);
+	}
+
+	private static int[] explicitIds(String name)
+	{
+		switch (name)
+		{
+			case "Pendant of ates":
+				return new int[]{ItemID.PENDANT_OF_ATES};
+			case "Divine rune pouch":
+				return new int[]{ItemID.DIVINE_RUNE_POUCH};
+			default:
+				return new int[0];
+		}
 	}
 
 	/**
@@ -633,6 +664,18 @@ public class SupplyPlanner
 		{
 			line.need += need;
 		}
+	}
+
+	private static boolean usesRunes(Map<String, MutableLine> lines)
+	{
+		for (MutableLine line : lines.values())
+		{
+			if (line.group == SupplyGroup.RUNES)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static String equipmentSlot(String name)
