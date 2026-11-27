@@ -62,7 +62,14 @@ public final class PatchStateMapper
 	{
 		if (previous != null && previous.getCrop() == crop && previous.getPlantedAt() != null)
 		{
-			return previous.getPlantedAt();
+			// A growing observation after a finished/cleared cycle means this is a new
+			// planting. Keeping the old timestamp would make the patch look ready again.
+			boolean newCycle = decoded.getState() == PatchStates.State.GROWING
+				&& previous.statusAt(observedAt) != PatchState.Status.GROWING;
+			if (!newCycle)
+			{
+				return previous.getPlantedAt();
+			}
 		}
 
 		int elapsedMinutes;

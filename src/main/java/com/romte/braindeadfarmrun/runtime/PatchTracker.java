@@ -111,9 +111,16 @@ public class PatchTracker
 	/** Time Tracking stores whether the farmer is protecting this patch. */
 	public boolean isProtected(PatchDefinition patch)
 	{
-		String key = patch.getRegionId() + "." + patch.getVarbit() + ".protected";
-		return Boolean.TRUE.equals(configManager.getRSProfileConfiguration("timetracking", key,
-			Boolean.class));
+		for (int region : patch.getRegions())
+		{
+			String key = region + "." + patch.getVarbit() + ".protected";
+			if (Boolean.TRUE.equals(configManager.getRSProfileConfiguration("timetracking", key,
+				Boolean.class)))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** Reads the live varbit for a patch, refreshing state that may have loaded before the scene. */
