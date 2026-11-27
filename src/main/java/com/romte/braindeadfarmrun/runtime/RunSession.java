@@ -2,6 +2,7 @@ package com.romte.braindeadfarmrun.runtime;
 
 import com.romte.braindeadfarmrun.data.Patches;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
+import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import com.romte.braindeadfarmrun.planning.RoutePlanner;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ public class RunSession
 	private final ClientThread clientThread;
 	private final EventBus eventBus;
 	private final ShortestPathService shortestPath;
+	private final PatchTracker patchTracker;
 	private volatile List<PatchDefinition> route = Collections.emptyList();
 	private volatile Set<PatchType> selectedTypes = Collections.unmodifiableSet(
 		EnumSet.allOf(PatchType.class));
@@ -46,16 +48,19 @@ public class RunSession
 	private volatile boolean active;
 	private volatile boolean preparing;
 	private volatile boolean routeReady;
+	private volatile boolean atStop;
+	private volatile List<String> currentTasks = Collections.emptyList();
 	private WorldPoint lastTarget;
 
 	@Inject
 	RunSession(Client client, ClientThread clientThread, EventBus eventBus,
-		ShortestPathService shortestPath)
+		ShortestPathService shortestPath, PatchTracker patchTracker)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
 		this.eventBus = eventBus;
 		this.shortestPath = shortestPath;
+		this.patchTracker = patchTracker;
 	}
 
 	public void start(Set<PatchType> types)
@@ -95,6 +100,51 @@ public class RunSession
 	public int currentIndex()
 	{
 		return index;
+	}
+
+	public boolean isAtStop()
+	{
+		return atStop;
+	}
+
+	/** Steps for the current patch, based on its tracked state. */
+	public List<String> currentTasks()
+	{
+		return currentTasks;
+	}
+
+	private void updateCurrentTasks()
+	{
+		if (!active || index >= route.size())
+		{
+			currentTasks = Collections.emptyList();
+			return;
+		}
+		PatchDefinition patch = route.get(index);
+		PatchState state = patchTracker.snapshot().get(patch.getId());
+		currentTasks = Collections.unmodifiableList(StopTasks.forPatch(patch, state));
+	}
+
+	/** Finish the current stop and display the next leg. */
+	public void nextStop()
+	{
+		clientThread.invokeLater(() ->
+		{
+			if (!active || !atStop || index >= route.size())
+			{
+				return;
+			}
+			atStop = false;
+			index++;
+			updateCurrentTasks();
+			if (index >= route.size())
+			{
+				finish();
+				return;
+			}
+			sendCurrentTarget();
+			queryStops(index, point(route.get(index - 1)));
+		});
 	}
 
 	public List<String> teleportsFor(int stopIndex)
@@ -299,19 +349,13 @@ public class RunSession
 			return;
 		}
 		PatchDefinition target = current.get(currentIndex);
-		if (distance(location.getX(), location.getY(), target.getX(), target.getY()) <= ARRIVAL_RADIUS)
+		if (!atStop
+			&& distance(location.getX(), location.getY(), target.getX(), target.getY()) <= ARRIVAL_RADIUS)
 		{
-			index = currentIndex + 1;
-			if (index >= current.size())
-			{
-				finish();
-			}
-			else
-			{
-				sendCurrentTarget();
-				queryStops(index, point(current.get(currentIndex)));
-			}
+			atStop = true;
+			message("At " + target.getDisplayName() + ". Complete the steps, then press NEXT STOP.");
 		}
+		updateCurrentTasks();
 	}
 
 	private void startOnClientThread(Set<PatchType> types)
@@ -344,7 +388,9 @@ public class RunSession
 		route = Collections.unmodifiableList(RoutePlanner.plan(patches, startX, startY));
 		index = 0;
 		active = true;
+		atStop = false;
 		routeReady = false;
+		updateCurrentTasks();
 		message("Route started: " + route.size() + " stops.");
 		message("Withdraw the bank tab supplies, then close the bank.");
 
@@ -373,6 +419,8 @@ public class RunSession
 		active = false;
 		preparing = false;
 		routeReady = false;
+		atStop = false;
+		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
 		index = 0;
 		shortestPath.clearResults();
@@ -388,6 +436,8 @@ public class RunSession
 		active = false;
 		preparing = false;
 		routeReady = false;
+		atStop = false;
+		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
 		index = 0;
 		shortestPath.clearResults();

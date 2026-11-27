@@ -62,6 +62,15 @@ public class FarmRunInfoOverlay extends OverlayPanel
 		addLine("Type: " + patch.getType().getDisplayName(), TEXT);
 		addLine("Location: " + locationOf(patch), TEXT);
 		addLine("Teleport: " + teleportText(index), LABEL);
+		List<String> tasks = runSession.currentTasks();
+		if (runSession.isAtStop() && !tasks.isEmpty())
+		{
+			addLine("Do:", LABEL);
+			for (String task : tasks)
+			{
+				addLine("\u2022 " + task, TEXT);
+			}
+		}
 		return super.render(graphics);
 	}
 
