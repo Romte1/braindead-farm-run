@@ -19,11 +19,13 @@ public final class BankSupplyLine
 	final int carried;
 	final int[] itemIds;
 	final String where;
+	/** Equipment slot this row occupies, or null when it cannot be equipped. */
+	final String equipmentSlot;
 	final boolean wear;
 	final boolean noted;
 
 	BankSupplyLine(SupplyGroup group, String name, int need, int have, int carried, int[] itemIds,
-		String where, boolean wear, boolean noted)
+		String where, String equipmentSlot, boolean wear, boolean noted)
 	{
 		this.group = group;
 		this.name = name;
@@ -32,6 +34,7 @@ public final class BankSupplyLine
 		this.carried = carried;
 		this.itemIds = itemIds;
 		this.where = where;
+		this.equipmentSlot = equipmentSlot;
 		this.wear = wear;
 		this.noted = noted;
 	}
@@ -49,7 +52,7 @@ public final class BankSupplyLine
 	public String toString()
 	{
 		return "BankSupplyLine(group=" + group + ", name=" + name + ", need=" + need + ", have=" + have
-			+ ", carried=" + carried + ", itemIds=" + Arrays.toString(itemIds) + ", wear=" + wear
-			+ ", noted=" + noted + ")";
+			+ ", carried=" + carried + ", itemIds=" + Arrays.toString(itemIds)
+			+ ", equipmentSlot=" + equipmentSlot + ", wear=" + wear + ", noted=" + noted + ")";
 	}
 }

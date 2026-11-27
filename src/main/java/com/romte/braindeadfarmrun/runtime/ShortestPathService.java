@@ -178,17 +178,6 @@ public class ShortestPathService
 		return result == null ? Collections.emptyList() : result.transports;
 	}
 
-	public List<String> allTransports()
-	{
-		List<String> result = new ArrayList<>();
-		for (QueryResult queryResult : results.values())
-		{
-			result.addAll(queryResult.transports);
-		}
-		Collections.sort(result);
-		return result;
-	}
-
 	public void clearResults()
 	{
 		results.clear();

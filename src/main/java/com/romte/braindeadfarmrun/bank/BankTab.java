@@ -58,7 +58,7 @@ public class BankTab
 	private static final int LINE_HEIGHT = 2;
 	private static final int TEXT_HEIGHT = 15;
 	private static final int ICON_SIZE = 10;
-	private static final int PLANNED_ROW_SPACING = 50;
+	private static final int PLANNED_ROW_SPACING = 64;
 	private static final int ITEM_WIDTH = 36;
 	private static final int ITEM_HEIGHT = 32;
 	private static final int LABEL_WIDTH = 46;
@@ -77,6 +77,7 @@ public class BankTab
 	private static final Color CARRIED = new Color(76, 193, 82);
 	private static final Color IN_STORAGE = new Color(232, 197, 58);
 	private static final Color MISSING = new Color(224, 85, 85);
+	private static final Color WEAR = new Color(170, 215, 255);
 	private static final String REST_OF_BANK = "Everything else";
 	private static final String TITLE = "Tab <col=ff0000>Farm run</col>";
 
@@ -363,7 +364,7 @@ public class BankTab
 		int[] nextWidget = {0};
 		if (!equipment.isEmpty())
 		{
-			height = addHeader(itemContainer, "Equipment", height);
+			height = addHeader(itemContainer, "To Equip", height);
 			height = drawSection(itemContainer, equipment, height, nextWidget, pending, bank);
 		}
 		if (!inventory.isEmpty())
@@ -427,6 +428,10 @@ public class BankTab
 			drawItem(widget, displayItem(line, bank), bank, line);
 			placeItem(widget, added++, height, PLANNED_ROW_SPACING);
 			pending.add(neededText(widget, line));
+			if (line.equipmentSlot != null)
+			{
+				pending.add(wearText(widget));
+			}
 		}
 		return rowsEnd(height, added, PLANNED_ROW_SPACING);
 	}
@@ -639,6 +644,12 @@ public class BankTab
 				sprite = CROSS_SPRITE;
 		}
 		return new PendingText(needed, colour.getRGB(), x, y, sprite);
+	}
+
+	private static PendingText wearText(Widget widget)
+	{
+		return new PendingText("WEAR", WEAR.getRGB(), widget.getOriginalX() - 5,
+			widget.getOriginalY() + ITEM_HEIGHT + 16, -1);
 	}
 
 	private void showDetails(BankSupplyLine line)

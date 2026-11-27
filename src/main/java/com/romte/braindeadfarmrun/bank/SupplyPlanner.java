@@ -7,6 +7,7 @@ import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -105,10 +106,11 @@ public class SupplyPlanner
 
 		for (String transport : transports)
 		{
-			addTransport(transport, lines);
+			addTransport(transport, lines, bank, inventory, worn);
 		}
 
 		List<BankSupplyLine> result = new ArrayList<>();
+		Set<String> wornSlots = new HashSet<>();
 		for (MutableLine line : lines.values())
 		{
 			int inBank = count(bank, line.itemIds);
@@ -116,13 +118,15 @@ public class SupplyPlanner
 			int have = inBank + carried;
 			String where = carried >= line.need ? "carried"
 				: have >= line.need ? "in your bank" : null;
+			boolean wear = line.equipmentSlot != null && wornSlots.add(line.equipmentSlot);
 			result.add(new BankSupplyLine(line.group, line.name, line.need, have, carried,
-				line.itemIds, where, false, line.noted));
+				line.itemIds, where, line.equipmentSlot, wear, line.noted));
 		}
 		return result;
 	}
 
-	private void addTransport(String display, Map<String, MutableLine> lines)
+	private void addTransport(String display, Map<String, MutableLine> lines, ItemContainer bank,
+		ItemContainer inventory, ItemContainer worn)
 	{
 		String lower = display.toLowerCase(Locale.ROOT);
 		if (lower.contains("soul wars") || lower.contains("minigame")
@@ -195,9 +199,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRune(lines, "Law rune", 1);
-				addRune(lines, "Air rune", 1);
-				addRune(lines, "Earth rune", 1);
+				addRunes(lines, bank, inventory, worn, 1, 1, 1, 0, 0);
 			}
 		}
 		else if (lower.contains("crystal teleport seed"))
@@ -216,7 +218,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, 2, 0, 1, 1, 0);
+				addRunes(lines, bank, inventory, worn, 2, 0, 1, 1, 0);
 			}
 		}
 		else if (lower.contains("kourend") || lower.contains("hosidius"))
@@ -227,7 +229,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, 2, 0, 0, 1, 1);
+				addRunes(lines, bank, inventory, worn, 2, 0, 0, 1, 1);
 			}
 		}
 		else if (lower.contains("watchtower"))
@@ -238,8 +240,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRune(lines, "Law rune", 2);
-				addRune(lines, "Earth rune", 2);
+				addRunes(lines, bank, inventory, worn, 2, 0, 2, 0, 0);
 			}
 		}
 		else if (lower.contains("kharyrll"))
@@ -250,7 +251,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRune(lines, "Law rune", 2);
+				addRunes(lines, bank, inventory, worn, 2, 0, 0, 0, 0);
 				addRune(lines, "Blood rune", 1);
 			}
 		}
@@ -262,9 +263,8 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRune(lines, "Law rune", 3);
+				addRunes(lines, bank, inventory, worn, 3, 0, 0, 0, 10);
 				addRune(lines, "Astral rune", 3);
-				addRune(lines, "Water rune", 10);
 			}
 		}
 		else if (lower.contains("varrock"))
@@ -275,7 +275,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, 1, 3, 0, 1, 0);
+				addRunes(lines, bank, inventory, worn, 1, 3, 0, 1, 0);
 			}
 		}
 		else if (lower.contains("lumbridge"))
@@ -286,7 +286,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, 1, 3, 1, 0, 0);
+				addRunes(lines, bank, inventory, worn, 1, 3, 1, 0, 0);
 			}
 		}
 		else if (lower.contains("falador"))
@@ -297,7 +297,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, 1, 3, 0, 0, 1);
+				addRunes(lines, bank, inventory, worn, 1, 3, 0, 0, 1);
 			}
 		}
 		else if (lower.contains("camelot"))
@@ -308,7 +308,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, 1, 5, 0, 0, 0);
+				addRunes(lines, bank, inventory, worn, 1, 5, 0, 0, 0);
 			}
 		}
 		else if (lower.contains("ardougne"))
@@ -319,7 +319,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, 2, 0, 0, 0, 2);
+				addRunes(lines, bank, inventory, worn, 2, 0, 0, 0, 2);
 			}
 		}
 		else if (lower.contains("taverley"))
@@ -334,9 +334,8 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRune(lines, "Law rune", 3);
+				addRunes(lines, bank, inventory, worn, 3, 0, 0, 0, 10);
 				addRune(lines, "Astral rune", 3);
-				addRune(lines, "Water rune", 10);
 			}
 		}
 		else if (lower.contains("brimhaven"))
@@ -351,8 +350,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRune(lines, "Law rune", 1);
-				addRune(lines, "Earth rune", 1);
+				addRunes(lines, bank, inventory, worn, 1, 0, 1, 0, 0);
 				addRune(lines, "Soul rune", 1);
 			}
 		}
@@ -364,7 +362,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRune(lines, "Law rune", 1);
+				addRunes(lines, bank, inventory, worn, 1, 0, 0, 0, 0);
 				addRune(lines, "Nature rune", 1);
 				addRune(lines, "Soul rune", 1);
 			}
@@ -377,7 +375,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, 2, 0, 0, 2, 0);
+				addRunes(lines, bank, inventory, worn, 2, 0, 0, 2, 0);
 			}
 		}
 	}
@@ -467,14 +465,64 @@ public class SupplyPlanner
 		}
 	}
 
-	private void addRunes(Map<String, MutableLine> lines, int law, int air, int earth, int fire,
-		int water)
+	private void addRunes(Map<String, MutableLine> lines, ItemContainer bank, ItemContainer inventory,
+		ItemContainer worn, int law, int air, int earth, int fire, int water)
 	{
 		addRune(lines, "Law rune", law);
-		addRune(lines, "Air rune", air);
-		addRune(lines, "Earth rune", earth);
-		addRune(lines, "Fire rune", fire);
-		addRune(lines, "Water rune", water);
+		addElementalRunes(lines, bank, inventory, worn, air, earth, fire, water);
+	}
+
+	/**
+	 * Uses combination runes from the bank when they cover two required elements, then fills the
+	 * remainder with single-element runes. Greedy by covered pairs keeps the planned rune stacks
+	 * as few as the player's stock allows.
+	 */
+	private void addElementalRunes(Map<String, MutableLine> lines, ItemContainer bank,
+		ItemContainer inventory, ItemContainer worn, int air, int earth, int fire, int water)
+	{
+		int[] need = {air, water, earth, fire};
+		String[] names = {"Mist rune", "Dust rune", "Mud rune", "Smoke rune", "Steam rune", "Lava rune"};
+		int[][] pairs = {{0, 1}, {0, 2}, {1, 2}, {0, 3}, {1, 3}, {2, 3}};
+		int[] available = new int[names.length];
+		for (int i = 0; i < names.length; i++)
+		{
+			int[] ids = resolve(names[i]);
+			available[i] = count(bank, ids) + count(inventory, ids) + count(worn, ids);
+		}
+
+		boolean progress = true;
+		while (progress)
+		{
+			progress = false;
+			int best = -1;
+			int bestCover = 0;
+			for (int i = 0; i < names.length; i++)
+			{
+				int a = pairs[i][0];
+				int b = pairs[i][1];
+				int cover = Math.min(Math.min(need[a], need[b]), available[i]);
+				if (cover > bestCover)
+				{
+					bestCover = cover;
+					best = i;
+				}
+			}
+			if (best >= 0)
+			{
+				int a = pairs[best][0];
+				int b = pairs[best][1];
+				need[a] -= bestCover;
+				need[b] -= bestCover;
+				available[best] -= bestCover;
+				addRune(lines, names[best], bestCover);
+				progress = true;
+			}
+		}
+
+		addRune(lines, "Air rune", need[0]);
+		addRune(lines, "Water rune", need[1]);
+		addRune(lines, "Earth rune", need[2]);
+		addRune(lines, "Fire rune", need[3]);
 	}
 
 	private void addRune(Map<String, MutableLine> lines, String name, int need)
@@ -542,11 +590,32 @@ public class SupplyPlanner
 		MutableLine line = lines.get(key);
 		if (line == null)
 		{
-			lines.put(key, new MutableLine(group, name, need, itemIds, noted));
+			lines.put(key, new MutableLine(group, name, need, itemIds, equipmentSlot(name), noted));
 		}
 		else
 		{
 			line.need += need;
+		}
+	}
+
+	private static String equipmentSlot(String name)
+	{
+		switch (name)
+		{
+			case "Magic secateurs":
+				return "weapon";
+			case "Farming cape":
+			case "Ardougne cloak":
+				return "cape";
+			case "Explorer's ring":
+			case "Ring of wealth":
+				return "ring";
+			case "Skills necklace":
+			case "Xeric's talisman":
+			case "Pendant of ates":
+				return "neck";
+			default:
+				return null;
 		}
 	}
 
@@ -575,14 +644,17 @@ public class SupplyPlanner
 		private final String name;
 		private int need;
 		private final int[] itemIds;
+		private final String equipmentSlot;
 		private final boolean noted;
 
-		private MutableLine(SupplyGroup group, String name, int need, int[] itemIds, boolean noted)
+		private MutableLine(SupplyGroup group, String name, int need, int[] itemIds,
+			String equipmentSlot, boolean noted)
 		{
 			this.group = group;
 			this.name = name;
 			this.need = need;
 			this.itemIds = itemIds;
+			this.equipmentSlot = equipmentSlot;
 			this.noted = noted;
 		}
 	}

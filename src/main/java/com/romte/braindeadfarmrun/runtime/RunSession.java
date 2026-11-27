@@ -99,7 +99,13 @@ public class RunSession
 
 	public List<String> allTeleportLines()
 	{
-		return shortestPath.allTransports();
+		List<String> all = new ArrayList<>();
+		List<PatchDefinition> current = route;
+		for (int i = 0; i < current.size(); i++)
+		{
+			all.addAll(shortestPath.transportsFor(i));
+		}
+		return all;
 	}
 
 	public void stop()

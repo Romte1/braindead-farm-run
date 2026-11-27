@@ -31,6 +31,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 @Slf4j
 @PluginDescriptor(
@@ -70,6 +71,12 @@ public class BraindeadFarmRunPlugin extends Plugin
 	@Inject
 	private EventBus eventBus;
 
+	@Inject
+	private OverlayManager overlayManager;
+
+	@Inject
+	private FarmRunInfoOverlay infoOverlay;
+
 	private NavigationButton navButton;
 	private BraindeadFarmRunPanel panel;
 	private int panelTicks;
@@ -88,6 +95,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		bankTab.startUp(() -> supplyPlanner.plan(runSession.selectedTypes(),
 			patchTracker.snapshot(), runSession.allTeleportLines()));
 		bankTab.setEnabled(true);
+		overlayManager.add(infoOverlay);
 		clientThread.invokeLater(supplyPlanner::refreshQuestState);
 
 		panel = new BraindeadFarmRunPanel(runSession, config, configManager);
@@ -114,6 +122,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		eventBus.unregister(shortestPathService);
 		eventBus.unregister(runSession);
 		runSession.stop();
+		overlayManager.remove(infoOverlay);
 		bankTab.shutDown();
 		panel = null;
 		log.debug("Braindead Farm Run stopped");
