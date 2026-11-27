@@ -73,6 +73,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 	private int panelTicks;
 	private int bankTicks;
 	private int questTicks;
+	private boolean bankRefreshQueued;
 
 	@Override
 	protected void startUp()
@@ -148,11 +149,18 @@ public class BraindeadFarmRunPlugin extends Plugin
 	@Subscribe
 	public void onPluginMessage(PluginMessage event)
 	{
-		if ("shortestpath".equals(event.getNamespace()) && "result".equals(event.getName()))
+		if (!"shortestpath".equals(event.getNamespace()) || !"result".equals(event.getName())
+			|| bankRefreshQueued)
 		{
-			// The bank tab now plans travel items, so refresh it as soon as a route result arrives.
-			clientThread.invokeLater(bankTab::refresh);
+			return;
 		}
+		// The bank tab plans travel items, so refresh it once per tick as route results arrive.
+		bankRefreshQueued = true;
+		clientThread.invokeLater(() ->
+		{
+			bankRefreshQueued = false;
+			bankTab.refresh();
+		});
 	}
 
 	@Subscribe
