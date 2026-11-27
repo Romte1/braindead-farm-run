@@ -302,7 +302,8 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("eternal teleport crystal"))
 		{
-			addTravel(lines, "Eternal teleport crystal");
+			addTravelUse(lines, "Eternal teleport crystal",
+				new int[]{ItemID.ETERNAL_CRYSTAL});
 		}
 		else if (lower.contains("pendant of ates"))
 		{
@@ -465,13 +466,15 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("taverley"))
 		{
-			addTravel(lines, "Taverley teleport");
+			addTravelUse(lines, "Taverley teleport",
+				new int[]{ItemID.NZONE_TELETAB_TAVERLEY});
 		}
 		else if (lower.contains("catherby"))
 		{
 			if (lower.contains("tablet"))
 			{
-				addTravel(lines, "Catherby teleport");
+				addTravelUse(lines, "Catherby teleport",
+					new int[]{ItemID.LUNAR_TABLET_CATHERBY_TELEPORT});
 			}
 			else
 			{
@@ -481,7 +484,8 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("brimhaven"))
 		{
-			addTravel(lines, "Brimhaven teleport");
+			addTravelUse(lines, "Brimhaven teleport",
+				new int[]{ItemID.NZONE_TELETAB_BRIMHAVEN});
 		}
 		else if (lower.contains("fenkenstrain"))
 		{
@@ -539,6 +543,7 @@ public class SupplyPlanner
 		}
 		if (ids.length == 0)
 		{
+			log.debug("Unresolved travel item: {}", name);
 			return;
 		}
 		String key = SupplyGroup.TRAVEL + ":" + name;
