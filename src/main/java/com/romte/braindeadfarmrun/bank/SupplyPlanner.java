@@ -74,13 +74,15 @@ public class SupplyPlanner
 		{
 			add(lines, SupplyGroup.TOOLS, "Spade", 1, new int[]{ItemID.SPADE}, false);
 		}
-		if (trees || fruitTrees)
+		if (magicSecateurs && (herbs || trees || fruitTrees))
 		{
-			boolean magic = magicSecateurs;
-			add(lines, SupplyGroup.TOOLS,
-				magic ? "Magic secateurs" : "Secateurs", 1,
-				new int[]{magic ? ItemID.FAIRY_ENCHANTED_SECATEURS : ItemID.SECATEURS},
-				false);
+			add(lines, SupplyGroup.TOOLS, "Magic secateurs", 1,
+				new int[]{ItemID.FAIRY_ENCHANTED_SECATEURS}, false);
+		}
+		else if (trees || fruitTrees)
+		{
+			add(lines, SupplyGroup.TOOLS, "Secateurs", 1,
+				new int[]{ItemID.SECATEURS}, false);
 		}
 		addCompost(lines, bank, inventory, worn);
 
