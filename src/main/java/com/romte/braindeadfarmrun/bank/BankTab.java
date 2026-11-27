@@ -648,6 +648,10 @@ public class BankTab
 		{
 			return 0;
 		}
+		if (lower.contains("eternal"))
+		{
+			return 1000;
+		}
 		int open = name.lastIndexOf('(');
 		int close = name.lastIndexOf(')');
 		if (open >= 0 && close > open + 1)

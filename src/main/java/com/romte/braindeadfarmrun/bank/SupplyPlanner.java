@@ -303,7 +303,7 @@ public class SupplyPlanner
 		else if (lower.contains("eternal teleport crystal"))
 		{
 			addTravelUse(lines, "Eternal teleport crystal",
-				new int[]{ItemID.ETERNAL_CRYSTAL});
+				new int[]{ItemID.PRIF_TELEPORT_CRYSTAL});
 		}
 		else if (lower.contains("pendant of ates"))
 		{
@@ -635,6 +635,13 @@ public class SupplyPlanner
 		if (hasNumberedVariants)
 		{
 			charged.removeIf(id -> !hasChargeSuffix(itemManager.getItemComposition(id).getName()));
+		}
+		if ("Slayer ring".equalsIgnoreCase(name)
+			&& !charged.contains(ItemID.SLAYER_RING_ETERNAL))
+		{
+			// The eternal ring is a separate, better variant; it has no numeric charge
+			// suffix, so the numbered-variant filter above would otherwise drop it.
+			charged.add(ItemID.SLAYER_RING_ETERNAL);
 		}
 		if (charged.isEmpty())
 		{
@@ -1083,7 +1090,7 @@ public class SupplyPlanner
 				capacity = owned;
 			}
 		}
-		if (capacity <= 0)
+		if (capacity <= 0 || capacity == Integer.MAX_VALUE)
 		{
 			return 1;
 		}
@@ -1139,6 +1146,10 @@ public class SupplyPlanner
 			}
 			String itemName = itemManager.getItemComposition(id).getName();
 			String lower = itemName.toLowerCase(Locale.ROOT);
+			if (lower.contains("eternal"))
+			{
+				return Integer.MAX_VALUE;
+			}
 			int charges = chargeValue(itemName);
 			if (charges > 0)
 			{
