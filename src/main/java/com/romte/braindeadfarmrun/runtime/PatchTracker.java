@@ -25,6 +25,7 @@ import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
+import net.runelite.api.NPCComposition;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
@@ -231,12 +232,30 @@ public class PatchTracker
 			return false;
 		}
 		String name = npc.getName();
-		if (name == null)
+		if (name != null)
+		{
+			String lower = name.toLowerCase(Locale.ROOT);
+			if (lower.contains("farmer") || lower.contains("gardener"))
+			{
+				return true;
+			}
+		}
+
+		// Some patch gardeners have unique names (for example Heskel). The reliable common
+		// property is the "Pay" action used to protect or clear a patch.
+		NPCComposition composition = npc.getComposition();
+		if (composition == null || composition.getActions() == null)
 		{
 			return false;
 		}
-		String lower = name.toLowerCase(Locale.ROOT);
-		return lower.contains("farmer") || lower.contains("gardener");
+		for (String action : composition.getActions())
+		{
+			if (action != null && action.startsWith("Pay"))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static int distance(int x1, int y1, int x2, int y2)

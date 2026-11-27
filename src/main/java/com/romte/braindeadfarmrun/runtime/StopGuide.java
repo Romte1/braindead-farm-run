@@ -162,6 +162,11 @@ final class StopGuide
 		return phase == Phase.COMPLETE;
 	}
 
+	Phase phase()
+	{
+		return phase;
+	}
+
 	/** True when the next click belongs on the farmer rather than on the patch itself. */
 	boolean isFarmerTarget()
 	{

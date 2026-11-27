@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
@@ -34,6 +35,7 @@ import net.runelite.client.events.PluginMessage;
  * The active farm run: selected patch types, visit order, and the next stop sent to Shortest
  * Path. The route advances automatically when the player reaches the current patch.
  */
+@Slf4j
 @Singleton
 public class RunSession
 {
@@ -65,6 +67,7 @@ public class RunSession
 	private StopGuide guide;
 	private int completeTicks;
 	private WorldPoint lastTarget;
+	private String lastGuideKey;
 
 	@Inject
 	RunSession(Client client, ClientThread clientThread, EventBus eventBus,
@@ -138,6 +141,7 @@ public class RunSession
 		PatchDefinition patch = route.get(index);
 		PatchState state = patchTracker.snapshot().get(patch.getId());
 		guide = new StopGuide(patch, state, patchTracker.isProtected(patch));
+		lastGuideKey = null;
 		updateCurrentTasks();
 	}
 
@@ -152,6 +156,12 @@ public class RunSession
 		PatchState state = patchTracker.snapshot().get(patch.getId());
 		guide.update(state, patchTracker.isProtected(patch));
 		currentTasks = Collections.unmodifiableList(guide.stepLines());
+		String key = guide.phase() + (guide.isFarmerTarget() ? "/farmer" : "/patch");
+		if (!key.equals(lastGuideKey))
+		{
+			lastGuideKey = key;
+			log.debug("Guide target for {}: {}", patch.getDisplayName(), key);
+		}
 	}
 
 	private void advanceStop()
@@ -506,6 +516,7 @@ public class RunSession
 		atStop = false;
 		guide = null;
 		completeTicks = 0;
+		lastGuideKey = null;
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
 		index = 0;
@@ -525,6 +536,7 @@ public class RunSession
 		atStop = false;
 		guide = null;
 		completeTicks = 0;
+		lastGuideKey = null;
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
 		index = 0;
