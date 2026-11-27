@@ -34,6 +34,7 @@ import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.ScriptID;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetTextAlignment;
 import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatMessageManager;
@@ -81,7 +82,7 @@ public class BankTab
 	private static final Color IN_STORAGE = new Color(232, 197, 58);
 	private static final Color MISSING = new Color(224, 85, 85);
 	private static final Color WEAR = new Color(170, 215, 255);
-	private static final Color NOTED = new Color(205, 205, 205);
+	private static final Color NOTED = WEAR;
 	private static final String REST_OF_BANK = "Everything else";
 	private static final String TITLE = "Tab <col=ff0000>Farm run</col>";
 
@@ -530,17 +531,17 @@ public class BankTab
 
 		for (PendingText pendingText : pending)
 		{
-			int textX = pendingText.x + (pendingText.spriteId == -1 ? 2 : ICON_SIZE + 2);
 			Widget label = createText(itemContainer, pendingText.text, pendingText.colour, 34,
-				LABEL_HEIGHT, textX, pendingText.y);
+				LABEL_HEIGHT, pendingText.x, pendingText.y);
 			label.setFontId(496);
-			label.setYTextAlignment(1);
+			label.setXTextAlignment(WidgetTextAlignment.CENTER);
+			label.setYTextAlignment(WidgetTextAlignment.CENTER);
 			label.revalidate();
 			addedWidgets.add(label);
 			if (pendingText.spriteId != -1)
 			{
 				addedWidgets.add(createIcon(itemContainer, pendingText.spriteId,
-					pendingText.x, pendingText.y + 2));
+					pendingText.x - ICON_SIZE, pendingText.y + 2));
 			}
 		}
 
@@ -594,7 +595,8 @@ public class BankTab
 			{
 				pending.add(notedText(widget));
 			}
-			if (line.wear && count(inventory, line.itemIds) > 0)
+			if (line.wear && count(inventory, line.itemIds) > 0
+				&& count(client.getItemContainer(InventoryID.WORN), line.itemIds) == 0)
 			{
 				pending.add(wearText(widget));
 			}
@@ -854,7 +856,7 @@ public class BankTab
 	private PendingText neededText(Widget widget, BankSupplyLine line)
 	{
 		String needed = QuantityFormatter.quantityToStackSize(line.need);
-		int x = widget.getOriginalX() - 5;
+		int x = widget.getOriginalX() + 1;
 		int y = widget.getOriginalY() + ITEM_HEIGHT + 1;
 		int inBank = count(client.getItemContainer(InventoryID.BANK), line.itemIds);
 		int carried = count(client.getItemContainer(InventoryID.INV), line.itemIds)
@@ -882,13 +884,13 @@ public class BankTab
 
 	private static PendingText notedText(Widget widget)
 	{
-		return new PendingText("noted", NOTED.getRGB(), widget.getOriginalX() + 2,
+		return new PendingText("noted", NOTED.getRGB(), widget.getOriginalX() + 1,
 			widget.getOriginalY() - 11, -1);
 	}
 
 	private static PendingText wearText(Widget widget)
 	{
-		return new PendingText("WEAR", WEAR.getRGB(), widget.getOriginalX() - 5,
+		return new PendingText("WEAR", WEAR.getRGB(), widget.getOriginalX() + 1,
 			widget.getOriginalY() + ITEM_HEIGHT + 16, -1);
 	}
 
