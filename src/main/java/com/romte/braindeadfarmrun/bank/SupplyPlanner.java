@@ -219,7 +219,7 @@ public class SupplyPlanner
 				addRunes(lines, 2, 0, 1, 1, 0);
 			}
 		}
-		else if (lower.contains("kourend"))
+		else if (lower.contains("kourend") || lower.contains("hosidius"))
 		{
 			if (lower.contains("tablet"))
 			{

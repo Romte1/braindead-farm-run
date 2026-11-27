@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
@@ -23,6 +24,7 @@ import net.runelite.client.events.PluginMessage;
  * Uses Shortest Path's public plugin-message API to query the route for each stop and read the
  * transport hints it would use. The query uses the Bank + Inventory teleport-item setting.
  */
+@Slf4j
 @Singleton
 public class ShortestPathService
 {
@@ -57,6 +59,8 @@ public class ShortestPathService
 		Map<String, Object> overrides = new HashMap<>();
 		overrides.put("useTeleportationItems", "INVENTORY_AND_BANK");
 		String blocked = blockedTabletsForSpellbook();
+		log.debug("Shortest Path spellbook={} blockedTablets={}",
+			client.getVarbitValue(VarbitID.SPELLBOOK), blocked);
 		if (!blocked.isEmpty())
 		{
 			String existing = configManager.getConfiguration(NAMESPACE, "blockedTeleportItems");
