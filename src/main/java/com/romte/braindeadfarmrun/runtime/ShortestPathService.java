@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
@@ -220,14 +219,7 @@ public class ShortestPathService
 				Object display = ((Map<?, ?>) entry).get("displayInfo");
 				if (display instanceof String && !((String) display).isEmpty())
 				{
-					String text = (String) display;
-					// Bank-visit hops are not part of the run; the bank tab already lists the
-					// supplies the player is expected to withdraw before leaving.
-					if (text.toLowerCase(Locale.ROOT).contains("grand exchange"))
-					{
-						continue;
-					}
-					lines.add(text);
+					lines.add((String) display);
 				}
 			}
 		}
