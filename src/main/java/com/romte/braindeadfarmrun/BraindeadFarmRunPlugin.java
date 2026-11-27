@@ -87,6 +87,8 @@ public class BraindeadFarmRunPlugin extends Plugin
 	private int questTicks;
 	private boolean bankRefreshQueued;
 	private boolean bankLayoutDirty;
+	private boolean partialPlanDone;
+	private boolean wasActive;
 	private int lastResultVersion = -1;
 
 	@Override
@@ -97,10 +99,8 @@ public class BraindeadFarmRunPlugin extends Plugin
 		eventBus.register(shortestPathService);
 		eventBus.register(runSession);
 
-		bankTab.startUp(() -> runSession.allResultsReady()
-			? supplyPlanner.plan(runSession.selectedTypes(), patchTracker.snapshot(),
-				runSession.allTeleportLines(), runSession.allRequiredItems())
-			: null);
+		bankTab.startUp(() -> supplyPlanner.plan(runSession.selectedTypes(),
+			patchTracker.snapshot(), runSession.allTeleportLines(), runSession.allRequiredItems()));
 		bankTab.setEnabled(true);
 		overlayManager.add(infoOverlay);
 		clientThread.invokeLater(supplyPlanner::refreshQuestState);
@@ -142,7 +142,14 @@ public class BraindeadFarmRunPlugin extends Plugin
 		{
 			supplyPlanner.refreshQuestState();
 		}
-		bankTab.setRunActive(runSession.isActive());
+		boolean active = runSession.isActive();
+		if (active && !wasActive)
+		{
+			partialPlanDone = false;
+			lastResultVersion = -1;
+		}
+		wasActive = active;
+		bankTab.setRunActive(active);
 		bankTab.onGameTick();
 		if (bankLayoutDirty)
 		{
@@ -204,8 +211,11 @@ public class BraindeadFarmRunPlugin extends Plugin
 				return;
 			}
 			lastResultVersion = version;
-			if (runSession.allResultsReady())
+			if (runSession.allResultsReady() || !partialPlanDone)
 			{
+				// Show a useful plan as soon as the first result arrives, then refresh once
+				// more when the full route is available.
+				partialPlanDone = true;
 				bankTab.invalidatePlan();
 				bankTab.refresh();
 			}

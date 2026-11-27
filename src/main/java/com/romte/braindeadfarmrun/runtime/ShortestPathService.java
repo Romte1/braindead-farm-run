@@ -193,6 +193,11 @@ public class ShortestPathService
 		results.clear();
 	}
 
+	public void clearResult(int index)
+	{
+		results.remove(id(index));
+	}
+
 	/** Increments only when a stored result actually changes, so callers can debounce. */
 	public int resultVersion()
 	{
@@ -244,10 +249,8 @@ public class ShortestPathService
 			}
 		}
 		boolean reached = Boolean.TRUE.equals(data.get("reached"));
-		if (!missingItems.isEmpty())
-		{
-			log.debug("Shortest Path result {} needs items {}", id, missingItems);
-		}
+		log.debug("Shortest Path result {} reached={} transports={} missing={}",
+			id, reached, lines.size(), missingItems.size());
 		QueryResult next = new QueryResult(reached, lines, missingItems);
 		QueryResult previous = results.put((String) id, next);
 		if (!next.equals(previous))

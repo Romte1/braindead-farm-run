@@ -88,13 +88,22 @@ public class RunSession
 	public List<String> teleportsFor(int stopIndex)
 	{
 		List<String> lines = shortestPath.transportsFor(stopIndex);
-		if (routeReady || lines.isEmpty())
+		if (lines.isEmpty())
 		{
-			return routeReady ? lines : Collections.emptyList();
+			return Collections.emptyList();
 		}
-		// Before the bank closes, Shortest Path's result still contains the bank-visit hop.
-		// Show the actual destination teleport as a hint; the full path is shown after the
-		// inventory-only requery.
+		if (!routeReady || stopIndex != index)
+		{
+			// Before the bank closes, and for legs that have not been requeried with the
+			// final inventory yet, show the destination teleport rather than the bank-visit
+			// hop from the supply-mode result.
+			return Collections.singletonList(lastDestinationTransport(lines));
+		}
+		return lines;
+	}
+
+	private static String lastDestinationTransport(List<String> lines)
+	{
 		for (int i = lines.size() - 1; i >= 0; i--)
 		{
 			String line = lines.get(i);
@@ -102,10 +111,10 @@ public class RunSession
 			if (!lower.contains("walk") && !lower.contains("soul wars")
 				&& !lower.contains("grand exchange"))
 			{
-				return Collections.singletonList(line);
+				return line;
 			}
 		}
-		return Collections.singletonList(lines.get(lines.size() - 1));
+		return lines.get(lines.size() - 1);
 	}
 
 	/** True when every remaining stop has a Shortest Path result for the current mode. */
@@ -199,10 +208,16 @@ public class RunSession
 				return;
 			}
 			shortestPath.applyTeleportMode(!routeReady);
-			shortestPath.clearResults();
 			if (routeReady)
 			{
+				// Only the current leg needs the inventory-only recalculation; the remaining
+				// stops keep their supply-mode hints until the player advances to them.
+				shortestPath.clearResult(index);
 				sendCurrentTarget(false);
+			}
+			else
+			{
+				shortestPath.clearResults();
 			}
 			WorldPoint start;
 			if (index == 0)
@@ -216,7 +231,14 @@ public class RunSession
 			}
 			if (start != null)
 			{
-				queryStops(index, start);
+				if (routeReady)
+				{
+					shortestPath.query(index, start, point(route.get(index)));
+				}
+				else
+				{
+					queryStops(index, start);
+				}
 			}
 		});
 	}
