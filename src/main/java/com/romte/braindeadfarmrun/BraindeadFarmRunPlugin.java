@@ -17,8 +17,10 @@ import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.ScriptCallbackEvent;
 import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.events.ScriptPreFired;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.GameState;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
@@ -143,6 +145,15 @@ public class BraindeadFarmRunPlugin extends Plugin
 		{
 			questTicks = 0;
 			clientThread.invokeLater(supplyPlanner::refreshQuestState);
+		}
+	}
+
+	@Subscribe
+	public void onVarbitChanged(VarbitChanged event)
+	{
+		if (event.getVarbitId() == VarbitID.SPELLBOOK)
+		{
+			runSession.refreshTeleportPreference();
 		}
 	}
 

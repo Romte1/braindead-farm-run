@@ -107,6 +107,39 @@ public class RunSession
 		clientThread.invokeLater(() -> stopOnClientThread(true));
 	}
 
+	/** Rebuild the route queries when the player changes spellbook during a run. */
+	public void refreshTeleportPreference()
+	{
+		if (!active)
+		{
+			return;
+		}
+		clientThread.invokeLater(() ->
+		{
+			if (!active || index >= route.size())
+			{
+				return;
+			}
+			shortestPath.applyInventoryAndBank();
+			shortestPath.clearResults();
+			sendCurrentTarget();
+			WorldPoint start;
+			if (index == 0)
+			{
+				Player player = client.getLocalPlayer();
+				start = player == null ? null : player.getWorldLocation();
+			}
+			else
+			{
+				start = point(route.get(index - 1));
+			}
+			if (start != null)
+			{
+				queryStops(index, start);
+			}
+		});
+	}
+
 	public boolean isActive()
 	{
 		return active;

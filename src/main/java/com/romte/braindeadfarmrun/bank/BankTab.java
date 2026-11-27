@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -455,21 +456,75 @@ public class BankTab
 		}
 	}
 
-	private static int displayItem(BankSupplyLine line, ItemContainer bank)
+	private int displayItem(BankSupplyLine line, ItemContainer bank)
 	{
 		int best = line.itemIds[0];
-		int bestCount = 0;
+		int bestScore = -1;
+		int bestCount = -1;
 		for (int id : line.itemIds)
 		{
 			int count = bank.count(id);
-			if (count <= bestCount)
+			if (count <= 0)
 			{
 				continue;
 			}
-			best = id;
-			bestCount = count;
+			int score = variantScore(id);
+			if (score > bestScore || (score == bestScore && count > bestCount))
+			{
+				best = id;
+				bestScore = score;
+				bestCount = count;
+			}
+		}
+		if (bestScore < 0)
+		{
+			for (int id : line.itemIds)
+			{
+				int score = variantScore(id);
+				if (score > bestScore)
+				{
+					best = id;
+					bestScore = score;
+				}
+			}
 		}
 		return best;
+	}
+
+	/** Prefer charged jewellery variants and the highest tier over an uncharged or low tier one. */
+	private int variantScore(int itemId)
+	{
+		ItemComposition def = client.getItemDefinition(itemId);
+		String name = def.getName();
+		String lower = name.toLowerCase(Locale.ROOT);
+		if (lower.contains("uncharged") || lower.contains("empty"))
+		{
+			return 0;
+		}
+		int open = name.lastIndexOf('(');
+		int close = name.lastIndexOf(')');
+		if (open >= 0 && close > open + 1)
+		{
+			try
+			{
+				return Integer.parseInt(name.substring(open + 1, close).trim());
+			}
+			catch (NumberFormatException ignored)
+			{
+			}
+		}
+		int space = name.lastIndexOf(' ');
+		if (space >= 0)
+		{
+			try
+			{
+				return Integer.parseInt(name.substring(space + 1).trim());
+			}
+			catch (NumberFormatException ignored)
+			{
+			}
+		}
+		return 1;
 	}
 
 	private void drawItem(Widget widget, int itemId, ItemContainer bank, BankSupplyLine line)

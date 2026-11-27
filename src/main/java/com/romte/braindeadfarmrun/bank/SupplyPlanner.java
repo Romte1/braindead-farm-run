@@ -15,6 +15,7 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
@@ -144,15 +145,15 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("ring of wealth"))
 		{
-			addTravel(lines, "Ring of wealth");
+			addChargedTravel(lines, "Ring of wealth");
 		}
 		else if (lower.contains("skills necklace"))
 		{
-			addTravel(lines, "Skills necklace");
+			addChargedTravel(lines, "Skills necklace");
 		}
 		else if (lower.contains("xeric's talisman"))
 		{
-			addTravel(lines, "Xeric's talisman");
+			addChargedTravel(lines, "Xeric's talisman");
 		}
 		else if (lower.contains("eternal teleport crystal"))
 		{
@@ -160,11 +161,11 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("pendant of ates"))
 		{
-			addTravel(lines, "Pendant of ates");
+			addChargedTravel(lines, "Pendant of ates");
 		}
 		else if (lower.contains("quetzal"))
 		{
-			addTravel(lines, "Quetzal whistle");
+			addChargedTravel(lines, "Quetzal whistle");
 		}
 		else if (lower.contains("farming cape"))
 		{
@@ -188,7 +189,16 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("teleport to house") || lower.contains("house teleport"))
 		{
-			addTravel(lines, "Teleport to house");
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Teleport to house");
+			}
+			else
+			{
+				addRune(lines, "Law rune", 1);
+				addRune(lines, "Air rune", 1);
+				addRune(lines, "Earth rune", 1);
+			}
 		}
 		else if (lower.contains("crystal teleport seed"))
 		{
@@ -196,15 +206,66 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("teleport crystal"))
 		{
-			addTravel(lines, "Teleport crystal");
+			addChargedTravel(lines, "Teleport crystal");
 		}
 		else if (lower.contains("civitas"))
 		{
-			addRunes(lines, 2, 0, 1, 1, 0);
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Civitas illa Fortis teleport");
+			}
+			else
+			{
+				addRunes(lines, 2, 0, 1, 1, 0);
+			}
 		}
 		else if (lower.contains("kourend"))
 		{
-			addRunes(lines, 2, 0, 0, 1, 1);
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Kourend castle teleport");
+			}
+			else
+			{
+				addRunes(lines, 2, 0, 0, 1, 1);
+			}
+		}
+		else if (lower.contains("watchtower"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Watchtower teleport");
+			}
+			else
+			{
+				addRune(lines, "Law rune", 2);
+				addRune(lines, "Earth rune", 2);
+			}
+		}
+		else if (lower.contains("kharyrll"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Kharyrll teleport");
+			}
+			else
+			{
+				addRune(lines, "Law rune", 2);
+				addRune(lines, "Blood rune", 1);
+			}
+		}
+		else if (lower.contains("fishing guild"))
+		{
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Fishing guild teleport");
+			}
+			else
+			{
+				addRune(lines, "Law rune", 3);
+				addRune(lines, "Astral rune", 3);
+				addRune(lines, "Water rune", 10);
+			}
 		}
 		else if (lower.contains("varrock"))
 		{
@@ -267,7 +328,16 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("catherby"))
 		{
-			addTravel(lines, "Catherby teleport");
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Catherby teleport");
+			}
+			else
+			{
+				addRune(lines, "Law rune", 3);
+				addRune(lines, "Astral rune", 3);
+				addRune(lines, "Water rune", 10);
+			}
 		}
 		else if (lower.contains("brimhaven"))
 		{
@@ -275,11 +345,29 @@ public class SupplyPlanner
 		}
 		else if (lower.contains("fenkenstrain"))
 		{
-			addTravel(lines, "Fenkenstrain's castle teleport");
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Fenkenstrain's castle teleport");
+			}
+			else
+			{
+				addRune(lines, "Law rune", 1);
+				addRune(lines, "Earth rune", 1);
+				addRune(lines, "Soul rune", 1);
+			}
 		}
 		else if (lower.contains("harmony"))
 		{
-			addTravel(lines, "Harmony island teleport");
+			if (lower.contains("tablet"))
+			{
+				addTravel(lines, "Harmony island teleport");
+			}
+			else
+			{
+				addRune(lines, "Law rune", 1);
+				addRune(lines, "Nature rune", 1);
+				addRune(lines, "Soul rune", 1);
+			}
 		}
 		else if (lower.contains("trollheim"))
 		{
@@ -297,6 +385,86 @@ public class SupplyPlanner
 	private void addTravel(Map<String, MutableLine> lines, String name)
 	{
 		add(lines, SupplyGroup.TRAVEL, name, 1, resolve(name), false);
+	}
+
+	private void addChargedTravel(Map<String, MutableLine> lines, String name)
+	{
+		add(lines, SupplyGroup.TRAVEL, name, 1, resolveCharged(name), false);
+	}
+
+	/**
+	 * Charge-based teleport jewellery has a base uncharged item plus numbered variants. Keep the
+	 * numbered variants so the bank tab never plans an uncharged piece; if the search has no
+	 * numbered variants (Xeric's talisman, for example), keep the charged base item.
+	 */
+	private int[] resolveCharged(String name)
+	{
+		List<ItemPrice> prices = itemManager.search(name);
+		if (prices == null || prices.isEmpty())
+		{
+			return new int[0];
+		}
+		List<ItemPrice> unnoted = new ArrayList<>();
+		for (ItemPrice price : prices)
+		{
+			if (itemManager.getItemComposition(price.getId()).getNote() == 0)
+			{
+				unnoted.add(price);
+			}
+		}
+		if (unnoted.isEmpty())
+		{
+			unnoted = prices;
+		}
+
+		boolean hasNumberedVariants = false;
+		List<Integer> charged = new ArrayList<>();
+		for (ItemPrice price : unnoted)
+		{
+			String itemName = itemManager.getItemComposition(price.getId()).getName();
+			String lower = itemName.toLowerCase(Locale.ROOT);
+			if (lower.contains("uncharged") || lower.contains("empty"))
+			{
+				continue;
+			}
+			if (hasChargeSuffix(itemName))
+			{
+				hasNumberedVariants = true;
+			}
+			charged.add(price.getId());
+		}
+		if (hasNumberedVariants)
+		{
+			charged.removeIf(id -> !hasChargeSuffix(itemManager.getItemComposition(id).getName()));
+		}
+		if (charged.isEmpty())
+		{
+			return resolve(name);
+		}
+		int[] result = new int[charged.size()];
+		for (int i = 0; i < charged.size(); i++)
+		{
+			result[i] = charged.get(i);
+		}
+		return result;
+	}
+
+	private static boolean hasChargeSuffix(String itemName)
+	{
+		int open = itemName.lastIndexOf('(');
+		int close = itemName.lastIndexOf(')');
+		if (open < 0 || close <= open + 1)
+		{
+			return false;
+		}
+		try
+		{
+			return Integer.parseInt(itemName.substring(open + 1, close).trim()) >= 0;
+		}
+		catch (NumberFormatException e)
+		{
+			return false;
+		}
 	}
 
 	private void addRunes(Map<String, MutableLine> lines, int law, int air, int earth, int fire,
