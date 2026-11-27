@@ -5,11 +5,9 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
-import net.runelite.api.ItemComposition;
 import net.runelite.api.ScriptEvent;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.gameval.InterfaceID;
-import net.runelite.api.gameval.ItemID;
 import net.runelite.api.widgets.JavaScriptCallback;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetType;
@@ -44,7 +42,6 @@ class BankTabButton
 	private final ChatMessageManager chatMessageManager;
 	private boolean active;
 	private Widget background;
-	private Widget icon;
 
 	@Inject
 	BankTabButton(Client client, ClientThread clientThread, BankSearch bankSearch,
@@ -68,13 +65,8 @@ class BankTabButton
 			return; // already built for the bank that is open
 		}
 		background = createGraphic(parent, NAME, TAB_BUTTON, BUTTON_SIZE, BUTTON_X, BUTTON_Y);
-		icon = createModel(parent, NAME, ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED, BUTTON_SIZE - 6,
-			BUTTON_X + 3, BUTTON_Y + 3);
-		for (Widget part : new Widget[]{background, icon})
-		{
-			part.setAction(1, VIEW_TAB);
-			part.setOnOpListener((Object[]) new Object[]{(JavaScriptCallback) this::onClick});
-		}
+		background.setAction(1, VIEW_TAB);
+		background.setOnOpListener((Object[]) new Object[]{(JavaScriptCallback) this::onClick});
 		if (active)
 		{
 			active = false;
@@ -86,16 +78,11 @@ class BankTabButton
 	void reload()
 	{
 		Widget parent = client.getWidget(InterfaceID.Bankmain.UNIVERSE);
-		if (isChildOf(parent, icon))
-		{
-			icon.setHidden(true);
-		}
 		if (isChildOf(parent, background))
 		{
 			background.setHidden(true);
 		}
 		background = null;
-		icon = null;
 		init();
 	}
 
@@ -137,15 +124,10 @@ class BankTabButton
 			close();
 			bankSearch.reset(true);
 		}
-		if (icon != null)
-		{
-			icon.setHidden(true);
-		}
 		if (background != null)
 		{
 			background.setHidden(true);
 		}
-		icon = null;
 		background = null;
 		active = false;
 	}
@@ -159,7 +141,7 @@ class BankTabButton
 		String option = event.getMenuOption();
 		String target = event.getMenuTarget();
 		Widget clicked = event.getWidget();
-		boolean own = clicked == background || clicked == icon
+		boolean own = clicked == background
 			|| (target != null && (target.contains(NAME)
 				|| target.toLowerCase().contains("farm run")));
 		boolean otherTab = option.startsWith("View tab") && !own;
@@ -275,25 +257,6 @@ class BankTabButton
 		widget.setOriginalX(x);
 		widget.setOriginalY(y);
 		widget.setSpriteId(spriteId);
-		widget.setHasListener(true);
-		widget.setName(name);
-		widget.revalidate();
-		return widget;
-	}
-
-	private Widget createModel(Widget parent, String name, int itemId, int size, int x, int y)
-	{
-		ItemComposition definition = client.getItemDefinition(itemId);
-		Widget widget = parent.createChild(-1, WidgetType.MODEL);
-		widget.setOriginalWidth(size);
-		widget.setOriginalHeight(size);
-		widget.setOriginalX(x);
-		widget.setOriginalY(y);
-		widget.setModelId(definition.getInventoryModel());
-		widget.setModelZoom(1600);
-		widget.setRotationX(0);
-		widget.setRotationY(0);
-		widget.setRotationZ(0);
 		widget.setHasListener(true);
 		widget.setName(name);
 		widget.revalidate();

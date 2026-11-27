@@ -36,6 +36,7 @@ import net.runelite.api.widgets.WidgetType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
+import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.QuantityFormatter;
 import net.runelite.client.util.Text;
 
@@ -82,6 +83,8 @@ public class BankTab
 	private final ClientThread clientThread;
 	private final ChatMessageManager chatMessageManager;
 	private final BankTabButton button;
+	private final OverlayManager overlayManager;
+	private final BankTabButtonOverlay overlay;
 	private final List<Widget> addedWidgets = new ArrayList<>();
 	private final Map<Widget, BankSupplyLine> lineByWidget = new HashMap<>();
 	private int originalContainerChildren = -1;
@@ -91,17 +94,20 @@ public class BankTab
 
 	@Inject
 	BankTab(Client client, ClientThread clientThread, ChatMessageManager chatMessageManager,
-		BankTabButton button)
+		BankTabButton button, OverlayManager overlayManager, BankTabButtonOverlay overlay)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
 		this.chatMessageManager = chatMessageManager;
 		this.button = button;
+		this.overlayManager = overlayManager;
+		this.overlay = overlay;
 	}
 
 	public void startUp(Supplier<List<BankSupplyLine>> plan)
 	{
 		this.plan = plan;
+		overlayManager.add(overlay);
 	}
 
 	public boolean isBankOpen()
@@ -146,6 +152,7 @@ public class BankTab
 
 	public void shutDown()
 	{
+		overlayManager.remove(overlay);
 		setEnabled(false);
 	}
 
@@ -264,7 +271,7 @@ public class BankTab
 			originalContainerChildren = children.length;
 		}
 		Widget[] itemWidgets = itemContainer.getDynamicChildren();
-		clientThread.invokeAtTickEnd(() -> layOut(itemContainer, itemWidgets, plan.get()));
+		layOut(itemContainer, itemWidgets, plan.get());
 	}
 
 	public void onMenuOptionClicked(MenuOptionClicked event)

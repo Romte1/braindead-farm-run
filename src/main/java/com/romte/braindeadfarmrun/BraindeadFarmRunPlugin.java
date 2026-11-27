@@ -19,6 +19,7 @@ import net.runelite.api.events.WidgetLoaded;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -34,6 +35,9 @@ public class BraindeadFarmRunPlugin extends Plugin
 {
 	@Inject
 	private BraindeadFarmRunConfig config;
+
+	@Inject
+	private ConfigManager configManager;
 
 	@Inject
 	private ClientToolbar clientToolbar;
@@ -68,7 +72,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		bankTab.startUp(() -> supplyPlanner.plan(runSession.selectedTypes(), patchTracker.snapshot()));
 		bankTab.setEnabled(true);
 
-		panel = new BraindeadFarmRunPanel(runSession);
+		panel = new BraindeadFarmRunPanel(runSession, config, configManager);
 		navButton = NavigationButton.builder()
 			.tooltip("Braindead Farm Run")
 			.icon(createIcon())
@@ -139,6 +143,20 @@ public class BraindeadFarmRunPlugin extends Plugin
 	public void onMenuOptionClicked(MenuOptionClicked event)
 	{
 		bankTab.onMenuOptionClicked(event);
+	}
+
+	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if (BraindeadFarmRunConfig.GROUP.equals(event.getGroup())
+			&& "bottomlessCompostBucket".equals(event.getKey()))
+		{
+			bankTab.refresh();
+			if (panel != null)
+			{
+				panel.setBottomless(config.bottomlessCompostBucket());
+			}
+		}
 	}
 
 	@Provides
