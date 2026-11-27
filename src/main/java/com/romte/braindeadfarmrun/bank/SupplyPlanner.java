@@ -6,6 +6,7 @@ import com.romte.braindeadfarmrun.domain.patch.Crop;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -138,6 +139,13 @@ public class SupplyPlanner
 				{
 					add(lines, SupplyGroup.PAYMENTS, crop.getPaymentItem(),
 						crop.getPaymentQuantity(), resolve(crop.getPaymentItem()), true);
+				}
+				if ((type == PatchType.TREE || type == PatchType.FRUIT_TREE)
+					&& state.statusAt(Instant.now()) == PatchState.Status.READY)
+				{
+					// Gardeners charge 200 coins to instantly remove a grown tree or fruit tree.
+					add(lines, SupplyGroup.PAYMENTS, "Coins", 200,
+						new int[]{ItemID.COINS}, false);
 				}
 			}
 		}
