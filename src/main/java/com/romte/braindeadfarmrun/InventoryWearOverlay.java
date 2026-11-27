@@ -58,7 +58,7 @@ class InventoryWearOverlay extends WidgetItemOverlay
 		int width = metrics.stringWidth(text) + 6;
 		int height = metrics.getAscent() + 2;
 		int x = bounds.x + (bounds.width - width) / 2;
-		int y = bounds.y + bounds.height + 2;
+		int y = bounds.y + (bounds.height - height) / 2;
 		graphics.setColor(new Color(0, 0, 0, 170));
 		graphics.fillRoundRect(x, y, width, height, 4, 4);
 		graphics.setColor(WEAR);

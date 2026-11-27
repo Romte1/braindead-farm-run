@@ -886,7 +886,7 @@ public class BankTab
 
 	private static PendingText notedText(Widget widget)
 	{
-		return new PendingText("noted", NOTED.getRGB(), widget.getOriginalX() + 1,
+		return new PendingText("NOTED", NOTED.getRGB(), widget.getOriginalX() + 1,
 			widget.getOriginalY() + 9, -1);
 	}
 
