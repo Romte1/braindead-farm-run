@@ -2,6 +2,7 @@ package com.romte.braindeadfarmrun.bank;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -883,15 +884,23 @@ public class BankTab
 		Widget parent = addedWidgets.get(0).getParent();
 		if (parent != null && parent.getChildren() != null)
 		{
+			Widget[] children = parent.getChildren();
 			List<Widget> kept = new ArrayList<>();
-			for (Widget child : parent.getChildren())
+			for (Widget child : children)
 			{
 				if (child != null && !addedWidgets.contains(child))
 				{
 					kept.add(child);
 				}
 			}
-			parent.setChildren(kept.toArray(new Widget[0]));
+			// setChildren casts to the client's internal widget array type, so preserve the
+			// original array's runtime component type instead of creating a plain Widget[].
+			Widget[] filtered = Arrays.copyOf(children, kept.size());
+			for (int i = 0; i < kept.size(); i++)
+			{
+				filtered[i] = kept.get(i);
+			}
+			parent.setChildren(filtered);
 			parent.revalidate();
 		}
 		addedWidgets.clear();
