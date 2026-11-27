@@ -32,11 +32,13 @@ public class ShortestPathService
 		this.eventBus = eventBus;
 	}
 
-	/** Ask Shortest Path to consider teleport items from the bank and inventory for this run. */
-	public void applyInventoryAndBank(WorldPoint target)
+	/**
+	 * Ask Shortest Path to consider teleport items from the bank and inventory for this run.
+	 * Sending only the config override applies it without starting a displayed path.
+	 */
+	public void applyInventoryAndBank()
 	{
 		Map<String, Object> data = new HashMap<>();
-		data.put("target", target);
 		Map<String, Object> overrides = new HashMap<>();
 		overrides.put("useTeleportationItems", "INVENTORY_AND_BANK");
 		data.put("config", overrides);

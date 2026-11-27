@@ -43,7 +43,6 @@ public class RunSession
 	private volatile int index;
 	private volatile boolean active;
 	private WorldPoint lastTarget;
-	private int lastRequeryTick;
 
 	@Inject
 	RunSession(Client client, ClientThread clientThread, EventBus eventBus,
@@ -152,16 +151,9 @@ public class RunSession
 			return;
 		}
 		PatchDefinition target = current.get(currentIndex);
-		if (!shortestPath.hasResult(currentIndex)
-			&& client.getTickCount() - lastRequeryTick >= 20)
-		{
-			lastRequeryTick = client.getTickCount();
-			requeryCurrent(current, currentIndex, location);
-		}
 		if (distance(location.getX(), location.getY(), target.getX(), target.getY()) <= ARRIVAL_RADIUS)
 		{
 			index = currentIndex + 1;
-			lastRequeryTick = client.getTickCount();
 			if (index >= current.size())
 			{
 				finish();
@@ -169,14 +161,9 @@ public class RunSession
 			else
 			{
 				sendCurrentTarget();
+				queryStops(index, point(current.get(currentIndex)));
 			}
 		}
-	}
-
-	private void requeryCurrent(List<PatchDefinition> current, int currentIndex, WorldPoint playerLocation)
-	{
-		WorldPoint start = currentIndex == 0 ? playerLocation : point(current.get(currentIndex - 1));
-		shortestPath.query(currentIndex, start, point(current.get(currentIndex)));
 	}
 
 	private void startOnClientThread(Set<PatchType> types)
@@ -213,15 +200,21 @@ public class RunSession
 			? player.getWorldLocation().getPlane() : 0;
 		WorldPoint legStart = new WorldPoint(startX, startY, plane);
 		shortestPath.clearResults();
-		shortestPath.applyInventoryAndBank(point(route.get(0)));
-		for (int i = 0; i < route.size(); i++)
+		shortestPath.applyInventoryAndBank();
+		// Set the displayed path first: Shortest Path cancels queued queries on a new path.
+		sendCurrentTarget();
+		queryStops(0, legStart);
+	}
+
+	private void queryStops(int from, WorldPoint legStart)
+	{
+		List<PatchDefinition> current = route;
+		for (int i = from; i < current.size(); i++)
 		{
-			WorldPoint target = point(route.get(i));
+			WorldPoint target = point(current.get(i));
 			shortestPath.query(i, legStart, target);
 			legStart = target;
 		}
-		lastRequeryTick = client.getTickCount();
-		sendCurrentTarget();
 	}
 
 	private void stopOnClientThread(boolean announce)
