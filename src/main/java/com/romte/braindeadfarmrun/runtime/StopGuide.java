@@ -40,6 +40,7 @@ final class StopGuide
 	private final PatchType type;
 	private final Crop initialCrop;
 	private final boolean paymentNeeded;
+	private final boolean farmerRemoval;
 	private final List<Step> steps = new ArrayList<>();
 	private Phase phase;
 	private boolean paid;
@@ -54,6 +55,7 @@ final class StopGuide
 		this.paymentNeeded = initialCrop != null
 			? initialCrop.needsPayment()
 			: type != PatchType.HERB;
+		this.farmerRemoval = type == PatchType.TREE && status == PatchState.Status.READY;
 		boolean checkHealth = type == PatchType.TREE && status == PatchState.Status.READY
 			&& initialState != null && initialState.isCheckHealth();
 
@@ -163,11 +165,7 @@ final class StopGuide
 	/** True when the next click belongs on the farmer rather than on the patch itself. */
 	boolean isFarmerTarget()
 	{
-		if (phase == Phase.PAY)
-		{
-			return true;
-		}
-		return phase == Phase.REMOVE && type == PatchType.TREE && status() == PatchState.Status.READY;
+		return phase == Phase.PAY || (phase == Phase.REMOVE && farmerRemoval);
 	}
 
 	List<String> stepLines()

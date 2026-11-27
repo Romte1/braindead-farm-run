@@ -154,10 +154,29 @@ public class PatchTracker
 		{
 			return null;
 		}
-		NPC best = null;
-		int bestDistance = 13;
-		for (NPC npc : farmers)
+		NPC best = nearestFarmer(farmers, patch);
+		if (best != null)
 		{
+			return best;
+		}
+
+		// The NPC may have loaded before this plugin subscribed, or the spawn event may have
+		// been missed during a region change. Fall back to the current world view once.
+		WorldView worldView = client.getTopLevelWorldView();
+		return worldView == null || worldView.npcs() == null
+			? null : nearestFarmer(worldView.npcs(), patch);
+	}
+
+	private static NPC nearestFarmer(Iterable<? extends NPC> candidates, PatchDefinition patch)
+	{
+		NPC best = null;
+		int bestDistance = 21;
+		for (NPC npc : candidates)
+		{
+			if (!isFarmer(npc))
+			{
+				continue;
+			}
 			WorldPoint location = npc.getWorldLocation();
 			if (location == null || location.getPlane() != patch.getPlane())
 			{
@@ -199,20 +218,25 @@ public class PatchTracker
 
 	private void trackFarmer(NPC npc)
 	{
+		if (isFarmer(npc))
+		{
+			farmers.add(npc);
+		}
+	}
+
+	private static boolean isFarmer(NPC npc)
+	{
 		if (npc == null)
 		{
-			return;
+			return false;
 		}
 		String name = npc.getName();
 		if (name == null)
 		{
-			return;
+			return false;
 		}
 		String lower = name.toLowerCase(Locale.ROOT);
-		if (lower.contains("farmer") || lower.contains("gardener"))
-		{
-			farmers.add(npc);
-		}
+		return lower.contains("farmer") || lower.contains("gardener");
 	}
 
 	private static int distance(int x1, int y1, int x2, int y2)

@@ -3,16 +3,12 @@ package com.romte.braindeadfarmrun;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.runtime.PatchTracker;
 import com.romte.braindeadfarmrun.runtime.RunSession;
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Shape;
-import java.awt.Stroke;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Line2D;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
@@ -69,13 +65,25 @@ public class FarmRunWorldOverlay extends Overlay
 			return null;
 		}
 
+		boolean showArrow = client.getGameCycle() % 4 < 2;
 		if (runSession.currentTargetIsFarmer())
 		{
 			NPC farmer = patchTracker.farmerFor(patch);
 			if (farmer != null)
 			{
 				outlineRenderer.drawOutline(farmer, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
-				drawArrowAbove(graphics, farmer.getConvexHull());
+				Shape hull = farmer.getConvexHull();
+				if (hull != null)
+				{
+					if (showArrow)
+					{
+						drawArrowAbove(graphics, hull);
+					}
+				}
+				else
+				{
+					drawTileGuide(graphics, farmer.getLocalLocation(), showArrow);
+				}
 				return null;
 			}
 		}
@@ -87,22 +95,25 @@ public class FarmRunWorldOverlay extends Overlay
 			Shape hull = object.getConvexHull();
 			if (hull != null)
 			{
-				drawArrowAbove(graphics, hull);
+				if (showArrow)
+				{
+					drawArrowAbove(graphics, hull);
+				}
 			}
 			else
 			{
-				drawArrowAtTile(graphics, object.getLocalLocation());
+				drawTileGuide(graphics, object.getLocalLocation(), showArrow);
 			}
 			return null;
 		}
 
 		WorldPoint point = new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
 		LocalPoint local = LocalPoint.fromWorld(client.getTopLevelWorldView(), point);
-		drawArrowAtTile(graphics, local);
+		drawTileGuide(graphics, local, showArrow);
 		return null;
 	}
 
-	private void drawArrowAtTile(Graphics2D graphics, LocalPoint local)
+	private void drawTileGuide(Graphics2D graphics, LocalPoint local, boolean showArrow)
 	{
 		if (local == null)
 		{
@@ -114,8 +125,12 @@ public class FarmRunWorldOverlay extends Overlay
 			return;
 		}
 		OverlayUtil.renderPolygon(graphics, tile, GUIDE);
-		Rectangle bounds = tile.getBounds();
-		drawArrow(graphics, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+		if (showArrow)
+		{
+			Rectangle bounds = tile.getBounds();
+			GuideArrow.drawWorldArrow(graphics, GUIDE, bounds.x + bounds.width / 2,
+				bounds.y + bounds.height / 2);
+		}
 	}
 
 	private static void drawArrowAbove(Graphics2D graphics, Shape shape)
@@ -129,44 +144,7 @@ public class FarmRunWorldOverlay extends Overlay
 		{
 			return;
 		}
-		drawArrow(graphics, bounds.x + bounds.width / 2, bounds.y - ARROW_GAP);
-	}
-
-	private static void drawArrow(Graphics2D graphics, int x, int tipY)
-	{
-		Line2D.Double line = new Line2D.Double(x, tipY - 13, x, tipY);
-		Stroke previousStroke = graphics.getStroke();
-		Color previousColor = graphics.getColor();
-
-		graphics.setColor(Color.BLACK);
-		graphics.setStroke(new BasicStroke(9));
-		graphics.draw(line);
-		drawArrowHead(graphics, line, 4, 5);
-
-		graphics.setColor(GUIDE);
-		graphics.setStroke(new BasicStroke(6));
-		graphics.draw(line);
-		drawArrowHead(graphics, line, 2, 3);
-
-		graphics.setStroke(previousStroke);
-		graphics.setColor(previousColor);
-	}
-
-	private static void drawArrowHead(Graphics2D graphics, Line2D.Double line, int height, int width)
-	{
-		Polygon head = new Polygon();
-		head.addPoint(0, 6 + height);
-		head.addPoint(-6 - width, -1 - height);
-		head.addPoint(6 + width, -1 - height);
-
-		AffineTransform transform = new AffineTransform();
-		transform.translate(line.x2, line.y2);
-		double angle = Math.atan2(line.y2 - line.y1, line.x2 - line.x1);
-		transform.rotate(angle - Math.PI / 2);
-
-		Graphics2D copy = (Graphics2D) graphics.create();
-		copy.setTransform(transform);
-		copy.fill(head);
-		copy.dispose();
+		GuideArrow.drawWorldArrow(graphics, GUIDE, bounds.x + bounds.width / 2,
+			bounds.y - ARROW_GAP);
 	}
 }
