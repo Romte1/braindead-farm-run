@@ -23,9 +23,10 @@ public final class BankSupplyLine
 	final String equipmentSlot;
 	final boolean wear;
 	final boolean noted;
+	final String details;
 
 	BankSupplyLine(SupplyGroup group, String name, int need, int have, int carried, int[] itemIds,
-		String where, String equipmentSlot, boolean wear, boolean noted)
+		String where, String equipmentSlot, boolean wear, boolean noted, String details)
 	{
 		this.group = group;
 		this.name = name;
@@ -37,6 +38,7 @@ public final class BankSupplyLine
 		this.equipmentSlot = equipmentSlot;
 		this.wear = wear;
 		this.noted = noted;
+		this.details = details;
 	}
 
 	Status status()
@@ -53,6 +55,7 @@ public final class BankSupplyLine
 	{
 		return "BankSupplyLine(group=" + group + ", name=" + name + ", need=" + need + ", have=" + have
 			+ ", carried=" + carried + ", itemIds=" + Arrays.toString(itemIds)
-			+ ", equipmentSlot=" + equipmentSlot + ", wear=" + wear + ", noted=" + noted + ")";
+			+ ", equipmentSlot=" + equipmentSlot + ", wear=" + wear + ", noted=" + noted
+			+ ", details=" + details + ")";
 	}
 }

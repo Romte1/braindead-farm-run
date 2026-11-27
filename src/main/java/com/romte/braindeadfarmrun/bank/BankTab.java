@@ -327,6 +327,7 @@ public class BankTab
 	private void layOut(Widget itemContainer, Widget[] itemWidgets, List<BankSupplyLine> lines)
 	{
 		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		if (bank == null)
 		{
 			return;
@@ -335,18 +336,18 @@ public class BankTab
 		hideBankWidgets(itemContainer, itemWidgets);
 
 		List<BankSupplyLine> equipment = new ArrayList<>();
-		List<BankSupplyLine> inventory = new ArrayList<>();
+		List<BankSupplyLine> inventoryLines = new ArrayList<>();
 		Set<Integer> planned = new HashSet<>();
 		for (BankSupplyLine line : lines)
 		{
-			(line.wear ? equipment : inventory).add(line);
+			(line.wear ? equipment : inventoryLines).add(line);
 			for (int id : line.itemIds)
 			{
 				planned.add(id);
 			}
 		}
 		equipment.sort(Comparator.comparingInt(line -> groupRank(line.group)));
-		inventory.sort(Comparator.comparingInt(line -> groupRank(line.group)));
+		inventoryLines.sort(Comparator.comparingInt(line -> groupRank(line.group)));
 
 		LinkedHashSet<Integer> rest = new LinkedHashSet<>();
 		for (Item item : bank.getItems())
@@ -365,12 +366,12 @@ public class BankTab
 		if (!equipment.isEmpty())
 		{
 			height = addHeader(itemContainer, "To Equip", height);
-			height = drawSection(itemContainer, equipment, height, nextWidget, pending, bank);
+			height = drawSection(itemContainer, equipment, height, nextWidget, pending, bank, inventory);
 		}
-		if (!inventory.isEmpty())
+		if (!inventoryLines.isEmpty())
 		{
 			height = addHeader(itemContainer, "Inventory", height);
-			height = drawSection(itemContainer, inventory, height, nextWidget, pending, bank);
+			height = drawSection(itemContainer, inventoryLines, height, nextWidget, pending, bank, inventory);
 		}
 
 		if (!rest.isEmpty())
@@ -415,7 +416,7 @@ public class BankTab
 	}
 
 	private int drawSection(Widget itemContainer, List<BankSupplyLine> lines, int height,
-		int[] nextWidget, List<PendingText> pending, ItemContainer bank)
+		int[] nextWidget, List<PendingText> pending, ItemContainer bank, ItemContainer inventory)
 	{
 		int added = 0;
 		for (BankSupplyLine line : lines)
@@ -428,7 +429,7 @@ public class BankTab
 			drawItem(widget, displayItem(line, bank), bank, line);
 			placeItem(widget, added++, height, PLANNED_ROW_SPACING);
 			pending.add(neededText(widget, line));
-			if (line.equipmentSlot != null)
+			if (line.wear && count(inventory, line.itemIds) > 0)
 			{
 				pending.add(wearText(widget));
 			}
@@ -621,6 +622,20 @@ public class BankTab
 		widget.setAction(10, "Examine");
 	}
 
+	private static int count(ItemContainer container, int[] itemIds)
+	{
+		if (container == null)
+		{
+			return 0;
+		}
+		int total = 0;
+		for (int id : itemIds)
+		{
+			total += container.count(id);
+		}
+		return total;
+	}
+
 	private static PendingText neededText(Widget widget, BankSupplyLine line)
 	{
 		String needed = QuantityFormatter.quantityToStackSize(line.need)
@@ -656,7 +671,8 @@ public class BankTab
 	{
 		String message = "You need " + QuantityFormatter.formatNumber(line.need) + " x "
 			+ Text.removeTags(line.name) + ". "
-			+ (line.where == null || line.where.isEmpty() ? "You don't have any." : "You have " + line.where + ".");
+			+ (line.where == null || line.where.isEmpty() ? "You don't have any." : "You have " + line.where + ".")
+			+ (line.details == null || line.details.isEmpty() ? "" : " " + line.details);
 		chatMessageManager.queue(QueuedMessage.builder()
 			.type(ChatMessageType.ITEM_EXAMINE)
 			.runeLiteFormattedMessage(message)

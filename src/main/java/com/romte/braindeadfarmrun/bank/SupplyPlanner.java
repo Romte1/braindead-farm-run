@@ -16,12 +16,15 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
+import net.runelite.api.EnumComposition;
+import net.runelite.api.EnumID;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.game.ItemManager;
 import net.runelite.http.api.item.ItemPrice;
 
@@ -33,6 +36,29 @@ import net.runelite.http.api.item.ItemPrice;
 @Singleton
 public class SupplyPlanner
 {
+	private static final int[] RUNE_POUCH_TYPE_VARBITS = {
+		VarbitID.RUNE_POUCH_TYPE_1, VarbitID.RUNE_POUCH_TYPE_2, VarbitID.RUNE_POUCH_TYPE_3,
+		VarbitID.RUNE_POUCH_TYPE_4, VarbitID.RUNE_POUCH_TYPE_5, VarbitID.RUNE_POUCH_TYPE_6
+	};
+	private static final int[] RUNE_POUCH_QTY_VARBITS = {
+		VarbitID.RUNE_POUCH_QUANTITY_1, VarbitID.RUNE_POUCH_QUANTITY_2,
+		VarbitID.RUNE_POUCH_QUANTITY_3, VarbitID.RUNE_POUCH_QUANTITY_4,
+		VarbitID.RUNE_POUCH_QUANTITY_5, VarbitID.RUNE_POUCH_QUANTITY_6
+	};
+	private static final int[] RUNE_POUCH_IDS = {
+		ItemID.DIVINE_RUNE_POUCH, ItemID.BH_RUNE_POUCH, ItemID.DIVINE_RUNE_POUCH_TROUVER
+	};
+	private static final String[][] COMBINATION_RUNES = {
+		{"Mist rune", "Air rune", "Water rune"},
+		{"Dust rune", "Air rune", "Earth rune"},
+		{"Mud rune", "Water rune", "Earth rune"},
+		{"Smoke rune", "Air rune", "Fire rune"},
+		{"Steam rune", "Water rune", "Fire rune"},
+		{"Lava rune", "Earth rune", "Fire rune"},
+		{"Sunfire rune", "Fire rune"},
+		{"Aether rune", "Soul rune"}
+	};
+
 	private final Client client;
 	private final ItemManager itemManager;
 	private final BraindeadFarmRunConfig config;
@@ -54,11 +80,13 @@ public class SupplyPlanner
 
 	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states,
 		List<String> transports, List<Integer> requiredItems)
-	{		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
+	{
+		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
 
 		Map<String, MutableLine> lines = new LinkedHashMap<>();
+		Map<String, Integer> runeNeeds = new LinkedHashMap<>();
 
 		boolean herbs = types.contains(PatchType.HERB);
 		boolean allotments = types.contains(PatchType.ALLOTMENT);
@@ -108,20 +136,13 @@ public class SupplyPlanner
 
 		for (String transport : transports)
 		{
-			addTransport(transport, lines, bank, inventory, worn);
+			addTransport(transport, lines, runeNeeds);
 		}
 		for (int itemId : requiredItems)
 		{
-			addRequiredItem(lines, itemId);
+			addRequiredItem(lines, runeNeeds, itemId);
 		}
-		if (usesRunes(lines)
-			&& count(bank, ItemID.DIVINE_RUNE_POUCH)
-			+ count(inventory, ItemID.DIVINE_RUNE_POUCH)
-			+ count(worn, ItemID.DIVINE_RUNE_POUCH) > 0)
-		{
-			add(lines, SupplyGroup.TOOLS, "Divine rune pouch", 1,
-				new int[]{ItemID.DIVINE_RUNE_POUCH}, false);
-		}
+		planRunes(lines, runeNeeds, bank, inventory, worn);
 
 		List<BankSupplyLine> result = new ArrayList<>();
 		Set<String> wornSlots = new HashSet<>();
@@ -134,13 +155,14 @@ public class SupplyPlanner
 				: have >= line.need ? "in your bank" : null;
 			boolean wear = line.equipmentSlot != null && wornSlots.add(line.equipmentSlot);
 			result.add(new BankSupplyLine(line.group, line.name, line.need, have, carried,
-				line.itemIds, where, line.equipmentSlot, wear, line.noted));
+				line.itemIds, where, line.equipmentSlot, wear, line.noted, line.details));
 		}
 		return result;
 	}
 
 	/** Adds an item Shortest Path explicitly says the route needs to pick up. */
-	private void addRequiredItem(Map<String, MutableLine> lines, int itemId)
+	private void addRequiredItem(Map<String, MutableLine> lines, Map<String, Integer> runeNeeds,
+		int itemId)
 	{
 		ItemComposition def = itemManager.getItemComposition(itemId);
 		if (def == null)
@@ -153,6 +175,32 @@ public class SupplyPlanner
 			id = def.getLinkedNoteId();
 			def = itemManager.getItemComposition(id);
 		}
+		String name = def.getName();
+		String lower = name.toLowerCase(Locale.ROOT);
+		if (isCombination(name))
+		{
+			for (String[] combo : COMBINATION_RUNES)
+			{
+				if (combo[0].equalsIgnoreCase(name))
+				{
+					addRuneNeed(runeNeeds, combo[1], 1);
+					if (combo.length > 2)
+					{
+						addRuneNeed(runeNeeds, combo[2], 1);
+					}
+					return;
+				}
+			}
+		}
+		if (lower.endsWith("rune") || lower.contains(" rune"))
+		{
+			addRuneNeed(runeNeeds, name, 1);
+			return;
+		}
+		if (lower.equals("divine rune pouch") || lower.equals("rune pouch"))
+		{
+			return; // handled with the pouch contents by planRunes
+		}
 		for (MutableLine line : lines.values())
 		{
 			for (int existing : line.itemIds)
@@ -163,15 +211,12 @@ public class SupplyPlanner
 				}
 			}
 		}
-		String name = def.getName();
-		String lower = name.toLowerCase(Locale.ROOT);
-		SupplyGroup group = lower.endsWith("rune") || lower.contains(" rune")
-			? SupplyGroup.RUNES : SupplyGroup.TRAVEL;
+		SupplyGroup group = SupplyGroup.TRAVEL;
 		add(lines, group, name, 1, new int[]{id}, false);
 	}
 
-	private void addTransport(String display, Map<String, MutableLine> lines, ItemContainer bank,
-		ItemContainer inventory, ItemContainer worn)
+	private void addTransport(String display, Map<String, MutableLine> lines,
+		Map<String, Integer> runeNeeds)
 	{
 		String lower = display.toLowerCase(Locale.ROOT);
 		if (lower.contains("soul wars") || lower.contains("minigame")
@@ -244,7 +289,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 1, 1, 1, 0, 0);
+				addRunes(runeNeeds, 1, 1, 1, 0, 0);
 			}
 		}
 		else if (lower.contains("crystal teleport seed"))
@@ -263,7 +308,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 2, 0, 1, 1, 0);
+				addRunes(runeNeeds, 2, 0, 1, 1, 0);
 			}
 		}
 		else if (lower.contains("kourend") || lower.contains("hosidius"))
@@ -274,7 +319,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 2, 0, 0, 1, 1);
+				addRunes(runeNeeds, 2, 0, 0, 1, 1);
 			}
 		}
 		else if (lower.contains("watchtower"))
@@ -285,7 +330,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 2, 0, 2, 0, 0);
+				addRunes(runeNeeds, 2, 0, 2, 0, 0);
 			}
 		}
 		else if (lower.contains("kharyrll"))
@@ -296,8 +341,8 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 2, 0, 0, 0, 0);
-				addRune(lines, "Blood rune", 1);
+				addRunes(runeNeeds, 2, 0, 0, 0, 0);
+				addRuneNeed(runeNeeds, "Blood rune", 1);
 			}
 		}
 		else if (lower.contains("fishing guild"))
@@ -308,8 +353,8 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 3, 0, 0, 0, 10);
-				addRune(lines, "Astral rune", 3);
+				addRunes(runeNeeds, 3, 0, 0, 0, 10);
+				addRuneNeed(runeNeeds, "Astral rune", 3);
 			}
 		}
 		else if (lower.contains("varrock"))
@@ -320,7 +365,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 1, 3, 0, 1, 0);
+				addRunes(runeNeeds, 1, 3, 0, 1, 0);
 			}
 		}
 		else if (lower.contains("lumbridge"))
@@ -331,7 +376,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 1, 3, 1, 0, 0);
+				addRunes(runeNeeds, 1, 3, 1, 0, 0);
 			}
 		}
 		else if (lower.contains("falador"))
@@ -342,7 +387,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 1, 3, 0, 0, 1);
+				addRunes(runeNeeds, 1, 3, 0, 0, 1);
 			}
 		}
 		else if (lower.contains("camelot"))
@@ -353,7 +398,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 1, 5, 0, 0, 0);
+				addRunes(runeNeeds, 1, 5, 0, 0, 0);
 			}
 		}
 		else if (lower.contains("ardougne"))
@@ -364,7 +409,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 2, 0, 0, 0, 2);
+				addRunes(runeNeeds, 2, 0, 0, 0, 2);
 			}
 		}
 		else if (lower.contains("taverley"))
@@ -379,8 +424,8 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 3, 0, 0, 0, 10);
-				addRune(lines, "Astral rune", 3);
+				addRunes(runeNeeds, 3, 0, 0, 0, 10);
+				addRuneNeed(runeNeeds, "Astral rune", 3);
 			}
 		}
 		else if (lower.contains("brimhaven"))
@@ -395,8 +440,8 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 1, 0, 1, 0, 0);
-				addRune(lines, "Soul rune", 1);
+				addRunes(runeNeeds, 1, 0, 1, 0, 0);
+				addRuneNeed(runeNeeds, "Soul rune", 1);
 			}
 		}
 		else if (lower.contains("harmony"))
@@ -407,9 +452,9 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 1, 0, 0, 0, 0);
-				addRune(lines, "Nature rune", 1);
-				addRune(lines, "Soul rune", 1);
+				addRunes(runeNeeds, 1, 0, 0, 0, 0);
+				addRuneNeed(runeNeeds, "Nature rune", 1);
+				addRuneNeed(runeNeeds, "Soul rune", 1);
 			}
 		}
 		else if (lower.contains("trollheim"))
@@ -420,7 +465,7 @@ public class SupplyPlanner
 			}
 			else
 			{
-				addRunes(lines, bank, inventory, worn, 2, 0, 0, 2, 0);
+				addRunes(runeNeeds, 2, 0, 0, 2, 0);
 			}
 		}
 	}
@@ -470,6 +515,21 @@ public class SupplyPlanner
 		{
 			return new int[0];
 		}
+		String query = name.toLowerCase(Locale.ROOT);
+		List<ItemPrice> matching = new ArrayList<>();
+		for (ItemPrice price : prices)
+		{
+			String itemName = itemManager.getItemComposition(price.getId()).getName()
+				.toLowerCase(Locale.ROOT);
+			if (matchesVariant(itemName, query))
+			{
+				matching.add(price);
+			}
+		}
+		if (!matching.isEmpty())
+		{
+			prices = matching;
+		}
 		List<ItemPrice> unnoted = new ArrayList<>();
 		for (ItemPrice price : prices)
 		{
@@ -515,6 +575,14 @@ public class SupplyPlanner
 		return result;
 	}
 
+	private static boolean matchesVariant(String itemName, String query)
+	{
+		return itemName.equals(query)
+			|| itemName.startsWith(query + " ")
+			|| itemName.startsWith(query + "(")
+			|| (query.equals("quetzal whistle") && itemName.endsWith(" quetzal whistle"));
+	}
+
 	private static boolean hasChargeSuffix(String itemName)
 	{
 		int open = itemName.lastIndexOf('(');
@@ -533,24 +601,154 @@ public class SupplyPlanner
 		}
 	}
 
-	private void addRunes(Map<String, MutableLine> lines, ItemContainer bank, ItemContainer inventory,
-		ItemContainer worn, int law, int air, int earth, int fire, int water)
+	private void addRunes(Map<String, Integer> runeNeeds, int law, int air, int earth, int fire,
+		int water)
 	{
-		addRune(lines, "Law rune", law);
-		addElementalRunes(lines, bank, inventory, worn, air, earth, fire, water);
+		addRuneNeed(runeNeeds, "Law rune", law);
+		addElementalRunes(runeNeeds, air, earth, fire, water);
+	}
+
+	private void addElementalRunes(Map<String, Integer> runeNeeds, int air, int earth, int fire,
+		int water)
+	{
+		addRuneNeed(runeNeeds, "Air rune", air);
+		addRuneNeed(runeNeeds, "Water rune", water);
+		addRuneNeed(runeNeeds, "Earth rune", earth);
+		addRuneNeed(runeNeeds, "Fire rune", fire);
+	}
+
+	private static void addRuneNeed(Map<String, Integer> runeNeeds, String name, int need)
+	{
+		if (need > 0)
+		{
+			runeNeeds.merge(name, need, Integer::sum);
+		}
+	}
+
+	private void addRuneLine(Map<String, MutableLine> lines, String name, int need)
+	{
+		if (need > 0)
+		{
+			add(lines, SupplyGroup.RUNES, name, need, resolve(name), false);
+		}
 	}
 
 	/**
-	 * Uses combination runes from the bank when they cover two required elements, then fills the
-	 * remainder with single-element runes. Greedy by covered pairs keeps the planned rune stacks
-	 * as few as the player's stock allows.
+	 * Plans runes after all spell requirements are known. The pouch contents are used first, then
+	 * combination runes from the bank/inventory, then whatever single runes remain.
 	 */
-	private void addElementalRunes(Map<String, MutableLine> lines, ItemContainer bank,
-		ItemContainer inventory, ItemContainer worn, int air, int earth, int fire, int water)
+	private void planRunes(Map<String, MutableLine> lines, Map<String, Integer> runeNeeds,
+		ItemContainer bank, ItemContainer inventory, ItemContainer worn)
 	{
-		int[] need = {air, water, earth, fire};
+		if (runeNeeds.isEmpty())
+		{
+			return;
+		}
+		Map<String, Integer> pouch = readRunePouch();
+		int pouchId = pouchItemId(bank, inventory, worn);
+		if (pouchId > 0 && !pouch.isEmpty())
+		{
+			boolean used = subtractPouch(runeNeeds, pouch);
+			if (used)
+			{
+				String name = pouchName(pouchId);
+				add(lines, SupplyGroup.TOOLS, name, 1, new int[]{pouchId}, false);
+				setDetails(lines, SupplyGroup.TOOLS, name, pouchDetails(pouch));
+			}
+		}
+		useCombinationRunes(lines, runeNeeds, bank, inventory, worn);
+		for (Map.Entry<String, Integer> entry : runeNeeds.entrySet())
+		{
+			addRuneLine(lines, entry.getKey(), entry.getValue());
+		}
+	}
+
+	private Map<String, Integer> readRunePouch()
+	{
+		Map<String, Integer> runes = new LinkedHashMap<>();
+		EnumComposition runeEnum = client.getEnum(EnumID.RUNEPOUCH_RUNE);
+		if (runeEnum == null)
+		{
+			return runes;
+		}
+		for (int i = 0; i < RUNE_POUCH_TYPE_VARBITS.length; i++)
+		{
+			int quantity = client.getVarbitValue(RUNE_POUCH_QTY_VARBITS[i]);
+			int rune = client.getVarbitValue(RUNE_POUCH_TYPE_VARBITS[i]);
+			if (quantity <= 0 || rune < 0)
+			{
+				continue;
+			}
+			int itemId = runeEnum.getIntValue(rune);
+			if (itemId <= 0)
+			{
+				continue;
+			}
+			int canonical = itemManager.canonicalize(itemId);
+			String name = itemManager.getItemComposition(canonical).getName();
+			runes.merge(name, quantity, Integer::sum);
+		}
+		return runes;
+	}
+
+	private static boolean subtractPouch(Map<String, Integer> needs, Map<String, Integer> pouch)
+	{
+		boolean used = false;
+		for (String[] combo : COMBINATION_RUNES)
+		{
+			int quantity = pouch.getOrDefault(combo[0], 0);
+			if (quantity <= 0)
+			{
+				continue;
+			}
+			int first = needs.getOrDefault(combo[1], 0);
+			if (combo.length > 2)
+			{
+				int second = needs.getOrDefault(combo[2], 0);
+				int cover = Math.min(quantity, Math.min(first, second));
+				if (cover > 0)
+				{
+					needs.put(combo[1], first - cover);
+					needs.put(combo[2], second - cover);
+					used = true;
+				}
+			}
+			else
+			{
+				int cover = Math.min(quantity, first);
+				if (cover > 0)
+				{
+					needs.put(combo[1], first - cover);
+					used = true;
+				}
+			}
+		}
+		for (Map.Entry<String, Integer> entry : pouch.entrySet())
+		{
+			if (isCombination(entry.getKey()))
+			{
+				continue;
+			}
+			int need = needs.getOrDefault(entry.getKey(), 0);
+			int cover = Math.min(need, entry.getValue());
+			if (cover > 0)
+			{
+				needs.put(entry.getKey(), need - cover);
+				used = true;
+			}
+		}
+		return used;
+	}
+
+	private void useCombinationRunes(Map<String, MutableLine> lines, Map<String, Integer> needs,
+		ItemContainer bank, ItemContainer inventory, ItemContainer worn)
+	{
 		String[] names = {"Mist rune", "Dust rune", "Mud rune", "Smoke rune", "Steam rune", "Lava rune"};
-		int[][] pairs = {{0, 1}, {0, 2}, {1, 2}, {0, 3}, {1, 3}, {2, 3}};
+		String[][] pairs = {
+			{"Air rune", "Water rune"}, {"Air rune", "Earth rune"},
+			{"Water rune", "Earth rune"}, {"Air rune", "Fire rune"},
+			{"Water rune", "Fire rune"}, {"Earth rune", "Fire rune"}
+		};
 		int[] available = new int[names.length];
 		for (int i = 0; i < names.length; i++)
 		{
@@ -566,9 +764,9 @@ public class SupplyPlanner
 			int bestCover = 0;
 			for (int i = 0; i < names.length; i++)
 			{
-				int a = pairs[i][0];
-				int b = pairs[i][1];
-				int cover = Math.min(Math.min(need[a], need[b]), available[i]);
+				int first = needs.getOrDefault(pairs[i][0], 0);
+				int second = needs.getOrDefault(pairs[i][1], 0);
+				int cover = Math.min(Math.min(first, second), available[i]);
 				if (cover > bestCover)
 				{
 					bestCover = cover;
@@ -577,33 +775,97 @@ public class SupplyPlanner
 			}
 			if (best >= 0)
 			{
-				int a = pairs[best][0];
-				int b = pairs[best][1];
-				need[a] -= bestCover;
-				need[b] -= bestCover;
+				needs.put(pairs[best][0], needs.getOrDefault(pairs[best][0], 0) - bestCover);
+				needs.put(pairs[best][1], needs.getOrDefault(pairs[best][1], 0) - bestCover);
 				available[best] -= bestCover;
-				addRune(lines, names[best], bestCover);
+				addRuneLine(lines, names[best], bestCover);
 				progress = true;
 			}
 		}
 
-		addRune(lines, "Air rune", need[0]);
-		addRune(lines, "Water rune", need[1]);
-		addRune(lines, "Earth rune", need[2]);
-		addRune(lines, "Fire rune", need[3]);
+		useSingleCombination(lines, needs, "Sunfire rune", "Fire rune", bank, inventory, worn);
+		useSingleCombination(lines, needs, "Aether rune", "Soul rune", bank, inventory, worn);
 	}
 
-	private void addRune(Map<String, MutableLine> lines, String name, int need)
+	private void useSingleCombination(Map<String, MutableLine> lines, Map<String, Integer> needs,
+		String combination, String base, ItemContainer bank, ItemContainer inventory,
+		ItemContainer worn)
 	{
-		if (need > 0)
+		int need = needs.getOrDefault(base, 0);
+		if (need <= 0)
 		{
-			add(lines, SupplyGroup.RUNES, name, need, resolve(name), false);
+			return;
+		}
+		int[] ids = resolve(combination);
+		int available = count(bank, ids) + count(inventory, ids) + count(worn, ids);
+		int cover = Math.min(need, available);
+		if (cover > 0)
+		{
+			needs.put(base, need - cover);
+			addRuneLine(lines, combination, cover);
+		}
+	}
+
+	private static boolean isCombination(String name)
+	{
+		for (String[] combo : COMBINATION_RUNES)
+		{
+			if (combo[0].equalsIgnoreCase(name))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static int pouchItemId(ItemContainer bank, ItemContainer inventory, ItemContainer worn)
+	{
+		for (int id : RUNE_POUCH_IDS)
+		{
+			if (count(bank, id) + count(inventory, id) + count(worn, id) > 0)
+			{
+				return id;
+			}
+		}
+		return 0;
+	}
+
+	private static String pouchName(int itemId)
+	{
+		return itemId == ItemID.BH_RUNE_POUCH ? "Rune pouch" : "Divine rune pouch";
+	}
+
+	private static String pouchDetails(Map<String, Integer> pouch)
+	{
+		StringBuilder details = new StringBuilder("Holds ");
+		boolean first = true;
+		for (Map.Entry<String, Integer> entry : pouch.entrySet())
+		{
+			if (!first)
+			{
+				details.append(", ");
+			}
+			details.append(entry.getValue()).append(' ').append(entry.getKey());
+			first = false;
+		}
+		details.append("; covers the run's spell runes.");
+		return details.toString();
+	}
+
+	private static void setDetails(Map<String, MutableLine> lines, SupplyGroup group, String name,
+		String details)
+	{
+		MutableLine line = lines.get(group + ":" + name);
+		if (line != null)
+		{
+			line.details = details;
 		}
 	}
 
 	private void addCompost(Map<String, MutableLine> lines, ItemContainer bank,
 		ItemContainer inventory, ItemContainer worn)
-	{		if (config.bottomlessCompostBucket())
+	{
+		if (config.bottomlessCompostBucket())
 		{
 			add(lines, SupplyGroup.TOOLS, "Bottomless compost bucket", 1,
 				new int[]{ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED}, false);
@@ -636,7 +898,16 @@ public class SupplyPlanner
 		{
 			return new int[0];
 		}
-		int[] unnoted = prices.stream()
+		List<ItemPrice> exact = new ArrayList<>();
+		for (ItemPrice price : prices)
+		{
+			if (itemManager.getItemComposition(price.getId()).getName().equalsIgnoreCase(name))
+			{
+				exact.add(price);
+			}
+		}
+		List<ItemPrice> candidates = exact.isEmpty() ? prices : exact;
+		int[] unnoted = candidates.stream()
 			.mapToInt(ItemPrice::getId)
 			.filter(id -> itemManager.getItemComposition(id).getNote() == 0)
 			.toArray();
@@ -644,7 +915,7 @@ public class SupplyPlanner
 		{
 			return unnoted;
 		}
-		return prices.stream().mapToInt(ItemPrice::getId).toArray();
+		return candidates.stream().mapToInt(ItemPrice::getId).toArray();
 	}
 
 	private static void add(Map<String, MutableLine> lines, SupplyGroup group, String name, int need,
@@ -664,18 +935,6 @@ public class SupplyPlanner
 		{
 			line.need += need;
 		}
-	}
-
-	private static boolean usesRunes(Map<String, MutableLine> lines)
-	{
-		for (MutableLine line : lines.values())
-		{
-			if (line.group == SupplyGroup.RUNES)
-			{
-				return true;
-			}
-		}
-		return false;
 	}
 
 	private static String equipmentSlot(String name)
@@ -726,6 +985,7 @@ public class SupplyPlanner
 		private final int[] itemIds;
 		private final String equipmentSlot;
 		private final boolean noted;
+		private String details;
 
 		private MutableLine(SupplyGroup group, String name, int need, int[] itemIds,
 			String equipmentSlot, boolean noted)
