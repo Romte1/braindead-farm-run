@@ -866,11 +866,31 @@ public class SupplyPlanner
 			{
 				String name = COMBINATION_RUNES[best][0];
 				String first = COMBINATION_RUNES[best][1];
-				needs.put(first, needs.getOrDefault(first, 0) - bestCover);
 				if (bestBoth)
 				{
 					String second = COMBINATION_RUNES[best][2];
+					needs.put(first, needs.getOrDefault(first, 0) - bestCover);
 					needs.put(second, needs.getOrDefault(second, 0) - bestCover);
+				}
+				else if (COMBINATION_RUNES[best].length > 2)
+				{
+					// A combination rune can cover either component when only one is
+					// needed. Subtract from the component that is actually needed, not
+					// always from the first one; otherwise the second need never drops
+					// and a large bank stack is consumed one rune per iteration.
+					String second = COMBINATION_RUNES[best][2];
+					if (needs.getOrDefault(first, 0) > 0)
+					{
+						needs.put(first, needs.getOrDefault(first, 0) - bestCover);
+					}
+					else if (needs.getOrDefault(second, 0) > 0)
+					{
+						needs.put(second, needs.getOrDefault(second, 0) - bestCover);
+					}
+				}
+				else
+				{
+					needs.put(first, needs.getOrDefault(first, 0) - bestCover);
 				}
 				available.put(name, available.getOrDefault(name, 0) - bestCover);
 				if (addLines)
