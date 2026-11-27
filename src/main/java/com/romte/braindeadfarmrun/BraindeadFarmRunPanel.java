@@ -59,7 +59,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 	private final JCheckBox allotments = checkbox("Allotments", true);
 	private final JCheckBox bottomless = checkbox("Bottomless compost bucket", true);
 	private final JLabel status = new JLabel("Select runs and press START RUN.");
-	private final JLabel bankWarning = new JLabel("<html>To start, open<br>your bank first.</html>");
+	private final JLabel bankWarning = new JLabel("To start, open your bank first.");
 	private final JTextArea runText = new JTextArea();
 	private final Timer preparingTimer = new Timer(300, event -> animatePreparing());
 	private int preparingDots;
@@ -89,16 +89,18 @@ class BraindeadFarmRunPanel extends PluginPanel
 	{
 		setup.setLayout(new BoxLayout(setup, BoxLayout.Y_AXIS));
 		setup.setOpaque(false);
-		setup.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+		setup.setBorder(BorderFactory.createEmptyBorder(12, 4, 12, 4));
 
 		JLabel title = new JLabel("Braindead Farm Run");
 		title.setAlignmentX(Component.LEFT_ALIGNMENT);
+		title.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
 		title.setForeground(Color.WHITE);
 		title.setFont(title.getFont().deriveFont(Font.BOLD, 15f));
 		setup.add(title);
 
 		JLabel subtitle = new JLabel("Farm run planner");
 		subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+		subtitle.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
 		subtitle.setForeground(MUTED);
 		subtitle.setFont(subtitle.getFont().deriveFont(11f));
 		setup.add(subtitle);
@@ -108,9 +110,9 @@ class BraindeadFarmRunPanel extends PluginPanel
 		startButton.addActionListener(event -> toggle());
 		setup.add(startButton);
 		bankWarning.setForeground(new Color(220, 60, 60));
-		bankWarning.setFont(bankWarning.getFont().deriveFont(Font.BOLD, 14f));
-		bankWarning.setAlignmentX(Component.LEFT_ALIGNMENT);
-		bankWarning.setBorder(BorderFactory.createEmptyBorder(4, 8, 0, 0));
+		bankWarning.setFont(bankWarning.getFont().deriveFont(Font.BOLD, 13f));
+		bankWarning.setAlignmentX(Component.CENTER_ALIGNMENT);
+		bankWarning.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
 		setup.add(bankWarning);
 		setup.add(Box.createVerticalStrut(10));
 
@@ -134,6 +136,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 
 		setup.add(Box.createVerticalStrut(10));
 		status.setAlignmentX(Component.LEFT_ALIGNMENT);
+		status.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
 		status.setForeground(TEXT);
 		setup.add(status);
 
@@ -198,7 +201,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 			BorderFactory.createLineBorder(border),
 			BorderFactory.createEmptyBorder(6, 12, 6, 12)));
 		button.setMaximumSize(new Dimension(180, 34));
-		button.setAlignmentX(Component.LEFT_ALIGNMENT);
+		button.setAlignmentX(Component.CENTER_ALIGNMENT);
 		button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 	}
 
@@ -217,7 +220,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		label.setForeground(MUTED);
 		label.setFont(label.getFont().deriveFont(Font.BOLD, 11f));
 		label.setAlignmentX(Component.LEFT_ALIGNMENT);
-		label.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+		label.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 0));
 		return label;
 	}
 
