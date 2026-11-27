@@ -160,6 +160,16 @@ final class StopGuide
 		return phase == Phase.COMPLETE;
 	}
 
+	/** True when the next click belongs on the farmer rather than on the patch itself. */
+	boolean isFarmerTarget()
+	{
+		if (phase == Phase.PAY)
+		{
+			return true;
+		}
+		return phase == Phase.REMOVE && type == PatchType.TREE && status() == PatchState.Status.READY;
+	}
+
 	List<String> stepLines()
 	{
 		if (phase == Phase.COMPLETE && steps.isEmpty())

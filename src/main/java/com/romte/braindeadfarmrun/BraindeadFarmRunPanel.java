@@ -193,7 +193,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		button.setForeground(Color.WHITE);
 		button.setBackground(background);
 		button.setFont(button.getFont().deriveFont(Font.BOLD, 14f));
-		button.setHorizontalAlignment(SwingConstants.LEFT);
+		button.setHorizontalAlignment(SwingConstants.CENTER);
 		button.setBorder(BorderFactory.createCompoundBorder(
 			BorderFactory.createLineBorder(border),
 			BorderFactory.createEmptyBorder(6, 12, 6, 12)));

@@ -13,7 +13,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
@@ -32,7 +31,6 @@ public class FarmRunInfoOverlay extends OverlayPanel
 	{
 		this.runSession = runSession;
 		setPosition(OverlayPosition.TOP_LEFT);
-		setPriority(OverlayPriority.HIGH);
 		setMovable(true);
 		setSnappable(true);
 		panelComponent.setBackgroundColor(new Color(70, 61, 50, 230));

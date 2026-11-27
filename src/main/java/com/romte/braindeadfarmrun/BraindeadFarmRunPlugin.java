@@ -84,6 +84,9 @@ public class BraindeadFarmRunPlugin extends Plugin
 	@Inject
 	private InventoryWearOverlay inventoryWearOverlay;
 
+	@Inject
+	private FarmRunWorldOverlay worldOverlay;
+
 	private NavigationButton navButton;
 	private BraindeadFarmRunPanel panel;
 	private int panelTicks;
@@ -108,6 +111,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		bankTab.setEnabled(true);
 		overlayManager.add(infoOverlay);
 		overlayManager.add(inventoryWearOverlay);
+		overlayManager.add(worldOverlay);
 		clientThread.invokeLater(supplyPlanner::refreshQuestState);
 
 		panel = new BraindeadFarmRunPanel(runSession, config, configManager,
@@ -137,6 +141,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 		runSession.stop();
 		overlayManager.remove(infoOverlay);
 		overlayManager.remove(inventoryWearOverlay);
+		overlayManager.remove(worldOverlay);
 		bankTab.shutDown();
 		panel = null;
 		log.debug("Braindead Farm Run stopped");

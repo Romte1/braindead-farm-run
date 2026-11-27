@@ -344,6 +344,21 @@ public class RunSession
 		return active && currentIndex < current.size() ? current.get(currentIndex).getDisplayName() : null;
 	}
 
+	/** Current patch, or null when the run has finished. */
+	public PatchDefinition currentPatch()
+	{
+		List<PatchDefinition> current = route;
+		int currentIndex = index;
+		return active && currentIndex >= 0 && currentIndex < current.size()
+			? current.get(currentIndex) : null;
+	}
+
+	/** True when the current checklist action is talking to the patch farmer. */
+	public boolean currentTargetIsFarmer()
+	{
+		return active && atStop && guide != null && guide.isFarmerTarget();
+	}
+
 	public int remainingStops()
 	{
 		List<PatchDefinition> current = route;

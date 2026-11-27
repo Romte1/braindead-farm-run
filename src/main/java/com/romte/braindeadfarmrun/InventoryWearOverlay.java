@@ -55,13 +55,11 @@ class InventoryWearOverlay extends WidgetItemOverlay
 		graphics.setFont(FontManager.getRunescapeSmallFont());
 		FontMetrics metrics = graphics.getFontMetrics();
 		String text = "WEAR";
-		int width = metrics.stringWidth(text) + 6;
-		int height = metrics.getAscent() + 2;
-		int x = bounds.x + (bounds.width - width) / 2;
-		int y = bounds.y + (bounds.height - height) / 2;
-		graphics.setColor(new Color(0, 0, 0, 170));
-		graphics.fillRoundRect(x, y, width, height, 4, 4);
+		int x = bounds.x + (bounds.width - metrics.stringWidth(text)) / 2;
+		int y = bounds.y + (bounds.height - metrics.getHeight()) / 2 + metrics.getAscent();
+		graphics.setColor(Color.BLACK);
+		graphics.drawString(text, x + 1, y + 1);
 		graphics.setColor(WEAR);
-		graphics.drawString(text, x + 3, y + metrics.getAscent() + 1);
+		graphics.drawString(text, x, y);
 	}
 }

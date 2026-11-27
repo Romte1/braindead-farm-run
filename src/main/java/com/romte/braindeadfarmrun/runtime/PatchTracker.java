@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,12 +24,16 @@ import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.NPC;
 import net.runelite.api.ObjectComposition;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -55,6 +60,7 @@ public class PatchTracker
 	private final BraindeadFarmRunConfig config;
 	private final Map<String, PatchState> states = new ConcurrentHashMap<>();
 	private final Map<GameObject, TrackedObject> tracked = new HashMap<>();
+	private final Set<NPC> farmers = new HashSet<>();
 	private final Set<Integer> farmingVarbits = new HashSet<>();
 	private volatile boolean dirty;
 
@@ -81,6 +87,7 @@ public class PatchTracker
 			{
 				load();
 				importTimeTracking();
+				trackSceneNpcs();
 			}
 		});
 	}
@@ -90,6 +97,7 @@ public class PatchTracker
 		save();
 		states.clear();
 		tracked.clear();
+		farmers.clear();
 		dirty = false;
 	}
 
@@ -105,6 +113,111 @@ public class PatchTracker
 		String key = patch.getRegionId() + "." + patch.getVarbit() + ".protected";
 		return Boolean.TRUE.equals(configManager.getRSProfileConfiguration("timetracking", key,
 			Boolean.class));
+	}
+
+	/** Nearest loaded object for a patch. Client thread only. */
+	public GameObject objectFor(PatchDefinition patch)
+	{
+		if (patch == null)
+		{
+			return null;
+		}
+		GameObject best = null;
+		int bestDistance = Integer.MAX_VALUE;
+		for (Map.Entry<GameObject, TrackedObject> entry : tracked.entrySet())
+		{
+			TrackedObject value = entry.getValue();
+			if (!value.patch.getId().equals(patch.getId()))
+			{
+				continue;
+			}
+			GameObject object = entry.getKey();
+			WorldPoint location = object.getWorldLocation();
+			if (location == null || location.getPlane() != patch.getPlane())
+			{
+				continue;
+			}
+			int distance = distance(location.getX(), location.getY(), patch.getX(), patch.getY());
+			if (distance < bestDistance)
+			{
+				best = object;
+				bestDistance = distance;
+			}
+		}
+		return best;
+	}
+
+	/** Nearest loaded farmer or gardener for a patch. Client thread only. */
+	public NPC farmerFor(PatchDefinition patch)
+	{
+		if (patch == null)
+		{
+			return null;
+		}
+		NPC best = null;
+		int bestDistance = 13;
+		for (NPC npc : farmers)
+		{
+			WorldPoint location = npc.getWorldLocation();
+			if (location == null || location.getPlane() != patch.getPlane())
+			{
+				continue;
+			}
+			int distance = distance(location.getX(), location.getY(), patch.getX(), patch.getY());
+			if (distance < bestDistance)
+			{
+				best = npc;
+				bestDistance = distance;
+			}
+		}
+		return best;
+	}
+
+	@Subscribe
+	public void onNpcSpawned(NpcSpawned event)
+	{
+		trackFarmer(event.getNpc());
+	}
+
+	@Subscribe
+	public void onNpcDespawned(NpcDespawned event)
+	{
+		farmers.remove(event.getNpc());
+	}
+
+	private void trackSceneNpcs()
+	{
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView != null && worldView.npcs() != null)
+		{
+			for (NPC npc : worldView.npcs())
+			{
+				trackFarmer(npc);
+			}
+		}
+	}
+
+	private void trackFarmer(NPC npc)
+	{
+		if (npc == null)
+		{
+			return;
+		}
+		String name = npc.getName();
+		if (name == null)
+		{
+			return;
+		}
+		String lower = name.toLowerCase(Locale.ROOT);
+		if (lower.contains("farmer") || lower.contains("gardener"))
+		{
+			farmers.add(npc);
+		}
+	}
+
+	private static int distance(int x1, int y1, int x2, int y2)
+	{
+		return Math.max(Math.abs(x1 - x2), Math.abs(y1 - y2));
 	}
 
 	@Subscribe
@@ -169,14 +282,17 @@ public class PatchTracker
 			case LOGGED_IN:
 				load();
 				importTimeTracking();
+				trackSceneNpcs();
 				break;
 			case LOGIN_SCREEN:
 				save();
 				tracked.clear();
+				farmers.clear();
 				states.clear();
 				break;
 			case LOADING:
 				tracked.clear();
+				farmers.clear();
 				break;
 			default:
 				break;
