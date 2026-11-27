@@ -808,8 +808,14 @@ public class SupplyPlanner
 	{
 		boolean used = false;
 		boolean progress = true;
+		int guard = 0;
 		while (progress)
 		{
+			if (++guard > 10000)
+			{
+				log.warn("Combination rune planning aborted after {} iterations", guard);
+				break;
+			}
 			progress = false;
 			int best = -1;
 			int bestCover = 0;
