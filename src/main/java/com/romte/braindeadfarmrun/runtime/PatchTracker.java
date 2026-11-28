@@ -10,6 +10,7 @@ import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchStateMapper;
 import com.romte.braindeadfarmrun.domain.patch.PatchStates;
+import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import java.lang.reflect.Type;
 import java.time.Instant;
 import java.util.Collections;
@@ -21,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.CollisionData;
 import net.runelite.api.CollisionDataFlag;
@@ -49,6 +51,7 @@ import net.runelite.client.eventbus.Subscribe;
  *
  * <p>All client state is touched on the client thread. The panel reads a concurrent snapshot.</p>
  */
+@Slf4j
 @Singleton
 public class PatchTracker
 {
@@ -163,14 +166,21 @@ public class PatchTracker
 		dirty = true;
 	}
 
-	/** Nearest loaded object for a patch. Client thread only. */
+	/**
+	 * Loaded object that best represents the patch. A patch can have several objects sharing
+	 * its varbit (the soil, and one or more crop models). Prefer the largest object containing
+	 * the patch point so the overlay outlines the patch rather than a single plant.
+	 */
 	public GameObject objectFor(PatchDefinition patch)
 	{
 		if (patch == null)
 		{
 			return null;
 		}
+		WorldView worldView = client.getTopLevelWorldView();
 		GameObject best = null;
+		boolean bestContains = false;
+		int bestArea = -1;
 		int bestDistance = Integer.MAX_VALUE;
 		for (Map.Entry<GameObject, TrackedObject> entry : tracked.entrySet())
 		{
@@ -185,10 +195,25 @@ public class PatchTracker
 			{
 				continue;
 			}
+			Point min = object.getSceneMinLocation();
+			Point max = object.getSceneMaxLocation();
+			int minX = worldView == null ? location.getX() : worldView.getBaseX() + min.getX();
+			int minY = worldView == null ? location.getY() : worldView.getBaseY() + min.getY();
+			int maxX = worldView == null ? location.getX() + object.sizeX() - 1
+				: worldView.getBaseX() + max.getX();
+			int maxY = worldView == null ? location.getY() + object.sizeY() - 1
+				: worldView.getBaseY() + max.getY();
+			boolean contains = patch.getX() >= minX && patch.getX() <= maxX
+				&& patch.getY() >= minY && patch.getY() <= maxY;
+			int area = (maxX - minX + 1) * (maxY - minY + 1);
 			int distance = distance(location.getX(), location.getY(), patch.getX(), patch.getY());
-			if (distance < bestDistance)
+			if ((contains && !bestContains)
+				|| (contains == bestContains && area > bestArea)
+				|| (contains == bestContains && area == bestArea && distance < bestDistance))
 			{
 				best = object;
+				bestContains = contains;
+				bestArea = area;
 				bestDistance = distance;
 			}
 		}
@@ -231,41 +256,84 @@ public class PatchTracker
 		int[][] flags = collisionMaps != null && plane >= 0 && plane < collisionMaps.length
 			&& collisionMaps[plane] != null ? collisionMaps[plane].getFlags() : null;
 		int sceneSize = Constants.SCENE_SIZE;
+		int compareX = leprechaunPoint == null ? patch.getX() : leprechaunPoint.getX();
+		int compareY = leprechaunPoint == null ? patch.getY() : leprechaunPoint.getY();
 		WorldPoint best = null;
 		int bestDistance = Integer.MAX_VALUE;
-		for (int x = minX - 1; x <= maxX + 1; x++)
+		boolean useObjectRing = object.sizeX() > 1 || object.sizeY() > 1;
+		if (!useObjectRing)
 		{
-			for (int y = minY - 1; y <= maxY + 1; y++)
+			// Many varbit objects are a single crop model. Search around the patch
+			// coordinate instead of orbiting that one plant.
+			int radius = patch.getType() == PatchType.ALLOTMENT ? 4 : 3;
+			for (int dx = -radius; dx <= radius; dx++)
 			{
-				if (x >= minX && x <= maxX && y >= minY && y <= maxY)
+				for (int dy = -radius; dy <= radius; dy++)
 				{
-					continue; // the patch itself is not a standing tile
-				}
-				if (x < 0 || y < 0 || x >= sceneSize || y >= sceneSize)
-				{
-					continue;
-				}
-				if (flags != null && (flags[x][y] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0)
-				{
-					continue;
-				}
-				WorldPoint candidate = new WorldPoint(worldView.getBaseX() + x,
-					worldView.getBaseY() + y, plane);
-				if (candidate.equals(leprechaunPoint))
-				{
-					continue;
-				}
-				int compareX = leprechaunPoint == null ? patch.getX() : leprechaunPoint.getX();
-				int compareY = leprechaunPoint == null ? patch.getY() : leprechaunPoint.getY();
-				int distance = distance(candidate.getX(), candidate.getY(), compareX, compareY);
-				if (distance < bestDistance)
-				{
-					bestDistance = distance;
-					best = candidate;
+					int x = patch.getX() - worldView.getBaseX() + dx;
+					int y = patch.getY() - worldView.getBaseY() + dy;
+					if (dx == 0 && dy == 0 || x < 0 || y < 0 || x >= sceneSize || y >= sceneSize)
+					{
+						continue;
+					}
+					if (flags != null && (flags[x][y] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0)
+					{
+						continue;
+					}
+					WorldPoint candidate = new WorldPoint(worldView.getBaseX() + x,
+						worldView.getBaseY() + y, plane);
+					if (candidate.equals(leprechaunPoint))
+					{
+						continue;
+					}
+					int distance = distance(candidate.getX(), candidate.getY(), compareX, compareY);
+					if (distance < bestDistance)
+					{
+						bestDistance = distance;
+						best = candidate;
+					}
 				}
 			}
 		}
-		return best == null ? fallback : best;
+		else
+		{
+			for (int x = minX - 1; x <= maxX + 1; x++)
+			{
+				for (int y = minY - 1; y <= maxY + 1; y++)
+				{
+					if (x >= minX && x <= maxX && y >= minY && y <= maxY)
+					{
+						continue; // the patch itself is not a standing tile
+					}
+					if (x < 0 || y < 0 || x >= sceneSize || y >= sceneSize)
+					{
+						continue;
+					}
+					if (flags != null && (flags[x][y] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0)
+					{
+						continue;
+					}
+					WorldPoint candidate = new WorldPoint(worldView.getBaseX() + x,
+						worldView.getBaseY() + y, plane);
+					if (candidate.equals(leprechaunPoint))
+					{
+						continue;
+					}
+					int distance = distance(candidate.getX(), candidate.getY(), compareX, compareY);
+					if (distance < bestDistance)
+					{
+						bestDistance = distance;
+						best = candidate;
+					}
+				}
+			}
+		}
+		WorldPoint result = best == null ? fallback : best;
+		log.debug("Target tile for {}: {} object={} {}x{} at {} leprechaun={} at {}",
+			patch.getId(), result, object.getId(), object.sizeX(), object.sizeY(),
+			object.getWorldLocation(), leprechaun == null ? "none" : leprechaun.getName(),
+			leprechaunPoint);
+		return result;
 	}
 
 	/** Nearest tool leprechaun loaded for a patch. Client thread only. */

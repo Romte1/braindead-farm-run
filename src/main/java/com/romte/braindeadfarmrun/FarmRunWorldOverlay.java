@@ -115,7 +115,7 @@ public class FarmRunWorldOverlay extends Overlay
 		}
 
 		GameObject object = patchTracker.objectFor(patch);
-		if (object != null)
+		if (object != null && (object.sizeX() > 1 || object.sizeY() > 1))
 		{
 			outlineRenderer.drawOutline(object, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
 		}
