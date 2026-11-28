@@ -79,7 +79,6 @@ public class RunSession
 	private final Set<String> compostedPatches = new HashSet<>();
 	private final Set<String> paidPatches = new HashSet<>();
 	private StopGuide guide;
-	private int completeTicks;
 	private WorldPoint lastTarget;
 	private String lastGuideKey;
 
@@ -204,7 +203,6 @@ public class RunSession
 			return;
 		}
 		atStop = false;
-		completeTicks = 0;
 		index++;
 		if (index >= route.size())
 		{
@@ -213,38 +211,6 @@ public class RunSession
 		}
 		beginStop();
 		sendCurrentTarget();
-		if (routeReady)
-		{
-			// The other legs already have their supply-mode results. Recalculating the whole
-			// remaining route here makes Shortest Path run one search per stop in the same tick.
-			log.debug("Advancing to stop {}: redirect only, requery current leg later",
-				index + 1);
-			clientThread.invokeLater(this::requeryCurrentLegForInventory);
-		}
-	}
-
-	private void requeryCurrentLegForInventory()
-	{
-		if (!active || !routeReady || index >= route.size())
-		{
-			return;
-		}
-		int currentIndex = index;
-		WorldPoint start;
-		if (currentIndex == 0)
-		{
-			Player player = client.getLocalPlayer();
-			start = player == null ? null : player.getWorldLocation();
-		}
-		else
-		{
-			start = point(route.get(currentIndex - 1));
-		}
-		if (start != null)
-		{
-			log.debug("Requerying current leg {} with the carried inventory", currentIndex + 1);
-			shortestPath.query(currentIndex, start, navigationPoint(route.get(currentIndex)));
-		}
 	}
 
 	public List<String> teleportsFor(int stopIndex)
@@ -563,16 +529,14 @@ public class RunSession
 			// Shortest Path cannot enter the underwater area; the world/minimap arrow takes over.
 			clearPath();
 		}
-		if (atStop && guide != null && guide.isComplete())
+		advanceIfComplete();
+	}
+
+	private void advanceIfComplete()
+	{
+		if (active && atStop && guide != null && guide.isComplete())
 		{
-			if (++completeTicks >= 3)
-			{
-				advanceStop();
-			}
-		}
-		else
-		{
-			completeTicks = 0;
+			advanceStop();
 		}
 	}
 
@@ -586,6 +550,7 @@ public class RunSession
 			guide.onPayment();
 			patchTracker.markPaid(route.get(index));
 			updateCurrentTasks();
+			advanceIfComplete();
 			return;
 		}
 		if ((event.getType() == ChatMessageType.GAMEMESSAGE
@@ -602,6 +567,7 @@ public class RunSession
 				guide.onPayment();
 				patchTracker.markPaid(route.get(index));
 				updateCurrentTasks();
+				advanceIfComplete();
 			}
 			else if (guide.phase() == StopGuide.Phase.COMPOST
 				&& (COMPOST_APPLIED.matcher(message).matches()
@@ -702,7 +668,6 @@ public class RunSession
 		routeReady = false;
 		atStop = false;
 		guide = null;
-		completeTicks = 0;
 		lastGuideKey = null;
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
@@ -724,7 +689,6 @@ public class RunSession
 		routeReady = false;
 		atStop = false;
 		guide = null;
-		completeTicks = 0;
 		lastGuideKey = null;
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
