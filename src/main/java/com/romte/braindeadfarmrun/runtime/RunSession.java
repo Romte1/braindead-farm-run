@@ -436,7 +436,8 @@ public class RunSession
 	{
 		Player player = client.getLocalPlayer();
 		WorldPoint location = player == null ? null : player.getWorldLocation();
-		return location != null && location.getRegionID() == SEAWEED_REGION;
+		return location != null
+			&& (location.getRegionID() == SEAWEED_REGION || location.getY() >= 10_000);
 	}
 
 	private WorldPoint navigationPoint(PatchDefinition patch)
