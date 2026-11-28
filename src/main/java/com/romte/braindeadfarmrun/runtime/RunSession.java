@@ -561,26 +561,12 @@ public class RunSession
 			}
 			else if (guide.phase() == StopGuide.Phase.COMPOST
 				&& (COMPOST_APPLIED.matcher(message).matches()
-					|| COMPOST_ALREADY_APPLIED.matcher(message).matches())
-				&& isNearCurrentPatch())
+					|| COMPOST_ALREADY_APPLIED.matcher(message).matches()))
 			{
 				guide.onCompost();
 				updateCurrentTasks();
 			}
 		}
-	}
-
-	private boolean isNearCurrentPatch()
-	{
-		PatchDefinition patch = currentPatch();
-		Player player = client.getLocalPlayer();
-		if (patch == null || player == null || player.getWorldLocation() == null)
-		{
-			return false;
-		}
-		WorldPoint location = player.getWorldLocation();
-		return distance(location.getX(), location.getY(), patch.getX(), patch.getY())
-			<= ARRIVAL_RADIUS + 2;
 	}
 
 	private void startOnClientThread(Set<PatchType> types)
