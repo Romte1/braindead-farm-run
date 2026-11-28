@@ -679,10 +679,13 @@ public class BankTab
 	/** Prefer charged jewellery variants and the highest tier over an uncharged or low tier one. */
 	private int variantScore(int itemId)
 	{
-		ItemComposition def = client.getItemDefinition(itemId);
-		String name = def.getName();
+		return variantScoreForName(client.getItemDefinition(itemId).getName());
+	}
+
+	static int variantScoreForName(String name)
+	{
 		String lower = name.toLowerCase(Locale.ROOT);
-		if (lower.contains("uncharged") || lower.contains("empty"))
+		if (lower.contains("uncharged") || lower.contains("empty") || lower.contains("inert"))
 		{
 			return 0;
 		}

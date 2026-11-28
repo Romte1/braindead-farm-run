@@ -618,7 +618,7 @@ public class SupplyPlanner
 		line.uses++;
 	}
 
-	private static int[] explicitIds(String name)
+	static int[] explicitIds(String name)
 	{
 		switch (name)
 		{
@@ -633,7 +633,8 @@ public class SupplyPlanner
 					ItemID.ARDY_CAPE_HARD, ItemID.ARDY_CAPE_ELITE
 				};
 			case "Xeric's talisman":
-				return new int[]{ItemID.XERIC_TALISMAN, ItemID.XERIC_TALISMAN_EMPTY};
+				// The inert version cannot teleport; only the charged talisman is useful.
+				return new int[]{ItemID.XERIC_TALISMAN};
 			case "Pendant of ates":
 				return new int[]{ItemID.PENDANT_OF_ATES};
 			case "Divine rune pouch":
