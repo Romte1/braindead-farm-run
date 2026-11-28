@@ -462,7 +462,16 @@ public class PatchTracker
 
 	private static boolean isToolLeprechaun(NPC npc)
 	{
-		String name = npc == null ? null : npc.getName();
+		if (npc == null)
+		{
+			return false;
+		}
+		String name = npc.getName();
+		if (name == null)
+		{
+			NPCComposition composition = npc.getComposition();
+			name = composition == null ? null : composition.getName();
+		}
 		return name != null && name.toLowerCase(Locale.ROOT).contains("tool leprechaun");
 	}
 
