@@ -24,8 +24,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.CollisionData;
-import net.runelite.api.CollisionDataFlag;
 import net.runelite.api.Constants;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
@@ -33,6 +31,7 @@ import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.ObjectComposition;
 import net.runelite.api.Point;
+import net.runelite.api.Tile;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameObjectDespawned;
@@ -69,6 +68,8 @@ public class PatchTracker
 	private final Map<String, PatchState> states = new ConcurrentHashMap<>();
 	private final Map<String, Long> observedAt = new ConcurrentHashMap<>();
 	private final Map<GameObject, TrackedObject> tracked = new HashMap<>();
+	private final Map<String, GameObject> patchAreas = new HashMap<>();
+	private final Set<String> patchAreaMisses = new HashSet<>();
 	private final Set<NPC> farmers = new HashSet<>();
 	private final Set<NPC> leprechauns = new HashSet<>();
 	private final Set<Integer> farmingVarbits = new HashSet<>();
@@ -108,6 +109,8 @@ public class PatchTracker
 		states.clear();
 		observedAt.clear();
 		tracked.clear();
+		patchAreas.clear();
+		patchAreaMisses.clear();
 		farmers.clear();
 		leprechauns.clear();
 		dirty = false;
@@ -177,6 +180,11 @@ public class PatchTracker
 		{
 			return null;
 		}
+		GameObject patchArea = patchAreaFor(patch);
+		if (patchArea != null)
+		{
+			return patchArea;
+		}
 		WorldView worldView = client.getTopLevelWorldView();
 		GameObject best = null;
 		boolean bestContains = false;
@@ -221,6 +229,129 @@ public class PatchTracker
 	}
 
 	/**
+	 * The static soil/patch object near the patch coordinate. The varbit object is often just a
+	 * single crop model, so this is what should be outlined and used as the target area.
+	 */
+	public GameObject patchAreaFor(PatchDefinition patch)
+	{
+		if (patch == null)
+		{
+			return null;
+		}
+		GameObject cached = patchAreas.get(patch.getId());
+		if (cached != null)
+		{
+			return cached;
+		}
+		if (patchAreaMisses.contains(patch.getId()))
+		{
+			return null;
+		}
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null || worldView.getScene() == null)
+		{
+			return null;
+		}
+		int plane = patch.getPlane();
+		Tile[][][] tiles = worldView.getScene().getTiles();
+		if (plane < 0 || plane >= tiles.length)
+		{
+			return null;
+		}
+		int baseX = worldView.getBaseX();
+		int baseY = worldView.getBaseY();
+		int centerX = patch.getX() - baseX;
+		int centerY = patch.getY() - baseY;
+		GameObject best = null;
+		boolean bestContains = false;
+		int bestArea = -1;
+		int bestDistance = Integer.MAX_VALUE;
+		for (int x = centerX - 6; x <= centerX + 6; x++)
+		{
+			for (int y = centerY - 6; y <= centerY + 6; y++)
+			{
+				if (x < 0 || y < 0 || x >= Constants.SCENE_SIZE || y >= Constants.SCENE_SIZE
+					|| tiles[plane][x][y] == null)
+				{
+					continue;
+				}
+				GameObject[] objects = tiles[plane][x][y].getGameObjects();
+				if (objects == null)
+				{
+					continue;
+				}
+				for (GameObject object : objects)
+				{
+					if (object == null)
+					{
+						continue;
+					}
+					ObjectComposition definition = client.getObjectDefinition(object.getId());
+					if (definition == null || definition.getName() == null
+						|| !isPatchArea(patch.getType(), definition.getName()))
+					{
+						continue;
+					}
+					Point min = object.getSceneMinLocation();
+					Point max = object.getSceneMaxLocation();
+					int minX = baseX + min.getX();
+					int minY = baseY + min.getY();
+					int maxX = baseX + max.getX();
+					int maxY = baseY + max.getY();
+					boolean contains = patch.getX() >= minX && patch.getX() <= maxX
+						&& patch.getY() >= minY && patch.getY() <= maxY;
+					int area = (maxX - minX + 1) * (maxY - minY + 1);
+					int distance = distance(object.getWorldLocation().getX(),
+						object.getWorldLocation().getY(), patch.getX(), patch.getY());
+					if ((contains && !bestContains)
+						|| (contains == bestContains && area > bestArea)
+						|| (contains == bestContains && area == bestArea && distance < bestDistance))
+					{
+						best = object;
+						bestContains = contains;
+						bestArea = area;
+						bestDistance = distance;
+					}
+				}
+			}
+		}
+		if (best == null)
+		{
+			patchAreaMisses.add(patch.getId());
+		}
+		else
+		{
+			patchAreas.put(patch.getId(), best);
+		}
+		return best;
+	}
+
+	private static boolean isPatchArea(PatchType type, String name)
+	{
+		String lower = name.toLowerCase(Locale.ROOT);
+		switch (type)
+		{
+			case ALLOTMENT:
+				return lower.contains("allotment");
+			case HERB:
+				return lower.contains("herb") && lower.contains("patch");
+			case TREE:
+				return lower.contains("tree patch") && !lower.contains("fruit")
+					&& !lower.contains("hardwood") && !lower.contains("calquat");
+			case FRUIT_TREE:
+				return lower.contains("fruit tree");
+			case CALQUAT:
+				return lower.contains("calquat");
+			case HARDWOOD_TREE:
+				return lower.contains("hardwood");
+			case SEAWEED:
+				return lower.contains("seaweed");
+			default:
+				return false;
+		}
+	}
+
+	/**
 	 * A walkable tile beside the patch that is closest to the tool leprechaun. Allotment,
 	 * flower and herb produce is noted at the leprechaun, so this avoids sending the player to
 	 * the far side of a large patch. Client thread only.
@@ -236,99 +367,36 @@ public class PatchTracker
 		{
 			return new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
 		}
-		WorldPoint fallback = object.getWorldLocation();
 		WorldView worldView = client.getTopLevelWorldView();
-		if (worldView == null || worldView.getScene() == null)
+		if (worldView == null)
 		{
-			return fallback;
+			return object.getWorldLocation();
 		}
-		NPC leprechaun = toolLeprechaunFor(patch);
-		WorldPoint leprechaunPoint = leprechaun == null ? null : leprechaun.getWorldLocation();
-
 		Point min = object.getSceneMinLocation();
 		Point max = object.getSceneMaxLocation();
-		int minX = min.getX();
-		int minY = min.getY();
-		int maxX = max.getX();
-		int maxY = max.getY();
-		int plane = patch.getPlane();
-		CollisionData[] collisionMaps = worldView.getCollisionMaps();
-		int[][] flags = collisionMaps != null && plane >= 0 && plane < collisionMaps.length
-			&& collisionMaps[plane] != null ? collisionMaps[plane].getFlags() : null;
-		int sceneSize = Constants.SCENE_SIZE;
+		int minX = worldView.getBaseX() + min.getX();
+		int minY = worldView.getBaseY() + min.getY();
+		int maxX = worldView.getBaseX() + max.getX();
+		int maxY = worldView.getBaseY() + max.getY();
+		NPC leprechaun = toolLeprechaunFor(patch);
+		WorldPoint leprechaunPoint = leprechaun == null ? null : leprechaun.getWorldLocation();
 		int compareX = leprechaunPoint == null ? patch.getX() : leprechaunPoint.getX();
 		int compareY = leprechaunPoint == null ? patch.getY() : leprechaunPoint.getY();
 		WorldPoint best = null;
 		int bestDistance = Integer.MAX_VALUE;
-		boolean useObjectRing = object.sizeX() > 1 || object.sizeY() > 1;
-		if (!useObjectRing)
+		for (int x = minX; x <= maxX; x++)
 		{
-			// Many varbit objects are a single crop model. Search around the patch
-			// coordinate instead of orbiting that one plant.
-			int radius = patch.getType() == PatchType.ALLOTMENT ? 4 : 3;
-			for (int dx = -radius; dx <= radius; dx++)
+			for (int y = minY; y <= maxY; y++)
 			{
-				for (int dy = -radius; dy <= radius; dy++)
+				int distance = distance(x, y, compareX, compareY);
+				if (distance < bestDistance)
 				{
-					int x = patch.getX() - worldView.getBaseX() + dx;
-					int y = patch.getY() - worldView.getBaseY() + dy;
-					if (dx == 0 && dy == 0 || x < 0 || y < 0 || x >= sceneSize || y >= sceneSize)
-					{
-						continue;
-					}
-					if (flags != null && (flags[x][y] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0)
-					{
-						continue;
-					}
-					WorldPoint candidate = new WorldPoint(worldView.getBaseX() + x,
-						worldView.getBaseY() + y, plane);
-					if (candidate.equals(leprechaunPoint))
-					{
-						continue;
-					}
-					int distance = distance(candidate.getX(), candidate.getY(), compareX, compareY);
-					if (distance < bestDistance)
-					{
-						bestDistance = distance;
-						best = candidate;
-					}
+					bestDistance = distance;
+					best = new WorldPoint(x, y, patch.getPlane());
 				}
 			}
 		}
-		else
-		{
-			for (int x = minX - 1; x <= maxX + 1; x++)
-			{
-				for (int y = minY - 1; y <= maxY + 1; y++)
-				{
-					if (x >= minX && x <= maxX && y >= minY && y <= maxY)
-					{
-						continue; // the patch itself is not a standing tile
-					}
-					if (x < 0 || y < 0 || x >= sceneSize || y >= sceneSize)
-					{
-						continue;
-					}
-					if (flags != null && (flags[x][y] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0)
-					{
-						continue;
-					}
-					WorldPoint candidate = new WorldPoint(worldView.getBaseX() + x,
-						worldView.getBaseY() + y, plane);
-					if (candidate.equals(leprechaunPoint))
-					{
-						continue;
-					}
-					int distance = distance(candidate.getX(), candidate.getY(), compareX, compareY);
-					if (distance < bestDistance)
-					{
-						bestDistance = distance;
-						best = candidate;
-					}
-				}
-			}
-		}
-		WorldPoint result = best == null ? fallback : best;
+		WorldPoint result = best == null ? object.getWorldLocation() : best;
 		log.debug("Target tile for {}: {} object={} {}x{} at {} leprechaun={} at {}",
 			patch.getId(), result, object.getId(), object.sizeX(), object.sizeY(),
 			object.getWorldLocation(), leprechaun == null ? "none" : leprechaun.getName(),
@@ -546,6 +614,7 @@ public class PatchTracker
 	public void onGameObjectDespawned(GameObjectDespawned event)
 	{
 		tracked.remove(event.getGameObject());
+		patchAreas.values().removeIf(object -> object == event.getGameObject());
 	}
 
 	@Subscribe
@@ -580,6 +649,8 @@ public class PatchTracker
 			case LOGIN_SCREEN:
 				save();
 				tracked.clear();
+				patchAreas.clear();
+				patchAreaMisses.clear();
 				farmers.clear();
 				leprechauns.clear();
 				states.clear();
@@ -587,6 +658,8 @@ public class PatchTracker
 				break;
 			case LOADING:
 				tracked.clear();
+				patchAreas.clear();
+				patchAreaMisses.clear();
 				farmers.clear();
 				leprechauns.clear();
 				break;
