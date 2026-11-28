@@ -479,7 +479,8 @@ public class PatchTracker
 					|| previous.getPlantedAt().toEpochMilli() < changedAt.toEpochMilli() - 60_000L;
 				if (newer && previous != null && previous.getCrop() != null)
 				{
-					states.put(patch.getId(), PatchState.empty(patch.getId()));
+					states.put(patch.getId(), PatchState.empty(patch.getId())
+						.withWeeds(decoded.getStage() > 0));
 					changed = true;
 				}
 				continue;
@@ -531,6 +532,7 @@ public class PatchTracker
 		private boolean stump;
 		private boolean checkHealth;
 		private boolean fell;
+		private boolean weedy;
 
 		private static StoredPatch from(PatchState state)
 		{
@@ -543,6 +545,7 @@ public class PatchTracker
 			stored.stump = state.isStump();
 			stored.checkHealth = state.isCheckHealth();
 			stored.fell = state.isFell();
+			stored.weedy = state.isWeedy();
 			return stored;
 		}
 
@@ -550,7 +553,7 @@ public class PatchTracker
 		{
 			if (crop == null || plantedAt <= 0)
 			{
-				return PatchState.empty(patchId);
+				return PatchState.empty(patchId).withWeeds(weedy);
 			}
 			Crop value;
 			try
@@ -566,7 +569,8 @@ public class PatchTracker
 				.withDead(dead)
 				.withStump(stump)
 				.withCheckHealth(checkHealth)
-				.withFell(fell);
+				.withFell(fell)
+				.withWeeds(weedy);
 		}
 	}
 }

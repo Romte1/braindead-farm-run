@@ -28,9 +28,11 @@ public final class PatchState
 	private final boolean stump;
 	private final boolean checkHealth;
 	private final boolean fell;
+	private final boolean weedy;
 
 	private PatchState(String patchId, Crop crop, Instant plantedAt, boolean paid,
-		boolean diseased, boolean dead, boolean stump, boolean checkHealth, boolean fell)
+		boolean diseased, boolean dead, boolean stump, boolean checkHealth, boolean fell,
+		boolean weedy)
 	{
 		this.patchId = Objects.requireNonNull(patchId, "patchId");
 		this.crop = crop;
@@ -41,47 +43,61 @@ public final class PatchState
 		this.stump = stump;
 		this.checkHealth = checkHealth;
 		this.fell = fell;
+		this.weedy = weedy;
 	}
 
 	public static PatchState empty(String patchId)
 	{
-		return new PatchState(patchId, null, null, false, false, false, false, false, false);
+		return new PatchState(patchId, null, null, false, false, false, false, false, false, false);
 	}
 
 	public static PatchState planted(String patchId, Crop crop, Instant plantedAt, boolean paid)
 	{
 		return new PatchState(patchId, Objects.requireNonNull(crop, "crop"),
-			Objects.requireNonNull(plantedAt, "plantedAt"), paid, false, false, false, false, false);
+			Objects.requireNonNull(plantedAt, "plantedAt"), paid, false, false, false, false,
+			false, false);
 	}
 
 	public PatchState withDiseased(boolean diseased)
 	{
-		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);
+		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth,
+			fell, weedy);
 	}
 
 	public PatchState withDead(boolean dead)
 	{
-		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);
+		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth,
+			fell, weedy);
 	}
 
 	public PatchState withStump(boolean stump)
 	{
-		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);
+		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth,
+			fell, weedy);
 	}
 
 	public PatchState withPaid(boolean paid)
 	{
-		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);
+		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth,
+			fell, weedy);
 	}
 
 	public PatchState withCheckHealth(boolean checkHealth)
 	{
-		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);
+		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth,
+			fell, weedy);
 	}
 
 	public PatchState withFell(boolean fell)
 	{
-		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth, fell);
+		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth,
+			fell, weedy);
+	}
+
+	public PatchState withWeeds(boolean weedy)
+	{
+		return new PatchState(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth,
+			fell, weedy);
 	}
 
 	public PatchState cleared()
@@ -158,5 +174,11 @@ public final class PatchState
 	public boolean isFell()
 	{
 		return fell;
+	}
+
+	/** Empty patch that still has weeds to rake. */
+	public boolean isWeedy()
+	{
+		return weedy;
 	}
 }

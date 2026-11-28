@@ -30,7 +30,7 @@ public final class PatchStateMapper
 		switch (decoded.getState())
 		{
 			case EMPTY:
-				return PatchState.empty(patchId);
+				return PatchState.empty(patchId).withWeeds(decoded.getStage() > 0);
 			case UNKNOWN:
 				return previous != null ? previous : PatchState.empty(patchId);
 			case GROWING:

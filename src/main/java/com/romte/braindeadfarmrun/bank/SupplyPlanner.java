@@ -101,9 +101,12 @@ public class SupplyPlanner
 		boolean trees = types.contains(PatchType.TREE);
 		boolean fruitTrees = types.contains(PatchType.FRUIT_TREE);
 
-		if (herbs || allotments)
+		if (!autoweedUnlocked() || hasWeeds(types, states))
 		{
 			add(lines, SupplyGroup.TOOLS, "Rake", 1, new int[]{ItemID.RAKE}, false);
+		}
+		if (herbs || allotments)
+		{
 			add(lines, SupplyGroup.TOOLS, "Seed dibber", 1, new int[]{ItemID.DIBBER}, false);
 		}
 		if (herbs || allotments || trees || fruitTrees)
@@ -185,6 +188,27 @@ public class SupplyPlanner
 		}
 		log.debug("Supply plan finished: {} lines", result.size());
 		return result;
+	}
+
+	private boolean autoweedUnlocked()
+	{
+		return client.getVarbitValue(VarbitID.FARMING_BLOCKWEEDS) != 0;
+	}
+
+	private static boolean hasWeeds(Set<PatchType> types, Map<String, PatchState> states)
+	{
+		for (PatchType type : types)
+		{
+			for (PatchDefinition patch : Patches.forType(type))
+			{
+				PatchState state = states.get(patch.getId());
+				if (state != null && state.isWeedy())
+				{
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/** Resolves an item name for the current-step overlays. */

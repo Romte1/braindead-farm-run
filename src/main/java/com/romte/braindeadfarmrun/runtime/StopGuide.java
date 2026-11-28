@@ -41,6 +41,7 @@ final class StopGuide
 	private final Crop initialCrop;
 	private final boolean paymentNeeded;
 	private final boolean farmerRemoval;
+	private final boolean rakeNeeded;
 	private final List<Step> steps = new ArrayList<>();
 	private Phase phase;
 	private boolean paid;
@@ -57,6 +58,7 @@ final class StopGuide
 			? initialCrop.needsPayment()
 			: type != PatchType.HERB;
 		this.farmerRemoval = type == PatchType.TREE && status == PatchState.Status.READY;
+		this.rakeNeeded = initialState != null && initialState.isWeedy();
 		boolean checkHealth = type == PatchType.TREE && status == PatchState.Status.READY
 			&& initialState != null && initialState.isCheckHealth();
 
@@ -94,6 +96,10 @@ final class StopGuide
 					+ " crop with a spade."));
 		}
 
+		if (rakeNeeded)
+		{
+			steps.add(new Step(Phase.REMOVE, "Rake the weeds."));
+		}
 		if (status != PatchState.Status.GROWING)
 		{
 			String plant = initialCrop == null ? "your sapling or seeds"
@@ -182,7 +188,7 @@ final class StopGuide
 				return initialCrop != null && initialCrop.needsPayment()
 					? initialCrop.getPaymentItem() : null;
 			case REMOVE:
-				return farmerRemoval ? null : "Spade";
+				return farmerRemoval ? null : rakeNeeded ? "Rake" : "Spade";
 			default:
 				return null;
 		}
@@ -241,6 +247,10 @@ final class StopGuide
 
 	private boolean isCleared()
 	{
+		if (state != null && state.isWeedy())
+		{
+			return false;
+		}
 		return status() == PatchState.Status.EMPTY
 			|| (state != null && state.getCrop() == null);
 	}
