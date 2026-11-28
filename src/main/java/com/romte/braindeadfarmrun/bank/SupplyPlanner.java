@@ -130,10 +130,10 @@ public class SupplyPlanner
 			add(lines, SupplyGroup.TOOLS, "Secateurs", 1,
 				new int[]{ItemID.SECATEURS}, false);
 		}
-		addCompost(lines, bank, inventory, worn);
+		Instant now = Instant.now();
+		addCompost(lines, bank, inventory, worn, plantablePatches(route, states, now));
 		log.debug("Supply plan tools done: {} lines: {}", lines.size(), lines.keySet());
 
-		Instant now = Instant.now();
 		for (PatchDefinition patch : route)
 		{
 			PatchState state = states.get(patch.getId());
@@ -198,6 +198,22 @@ public class SupplyPlanner
 		}
 		log.debug("Supply plan finished: {} lines", result.size());
 		return result;
+	}
+
+	/** Number of visited patches that still need a planting, and therefore one compost use. */
+	private static int plantablePatches(List<PatchDefinition> route, Map<String, PatchState> states,
+		Instant now)
+	{
+		int count = 0;
+		for (PatchDefinition patch : route)
+		{
+			PatchState state = states.get(patch.getId());
+			if (state == null || state.statusAt(now) != PatchState.Status.GROWING)
+			{
+				count++;
+			}
+		}
+		return count;
 	}
 
 	private static boolean hasWeeds(List<PatchDefinition> route, Map<String, PatchState> states)
@@ -1047,8 +1063,14 @@ public class SupplyPlanner
 	}
 
 	private void addCompost(Map<String, MutableLine> lines, ItemContainer bank,
-		ItemContainer inventory, ItemContainer worn)
+		ItemContainer inventory, ItemContainer worn, int uses)
 	{
+		log.debug("Supply plan compost: uses={} bottomless={}", uses,
+			config.bottomlessCompostBucket());
+		if (uses <= 0)
+		{
+			return;
+		}
 		if (config.bottomlessCompostBucket())
 		{
 			add(lines, SupplyGroup.TOOLS, "Bottomless compost bucket", 1,
@@ -1072,7 +1094,7 @@ public class SupplyPlanner
 				break;
 			}
 		}
-		add(lines, SupplyGroup.TOOLS, names[chosen], 1, new int[]{itemIds[chosen]}, false);
+		add(lines, SupplyGroup.TOOLS, names[chosen], uses, new int[]{itemIds[chosen]}, false);
 	}
 
 	private int[] resolve(String name)
