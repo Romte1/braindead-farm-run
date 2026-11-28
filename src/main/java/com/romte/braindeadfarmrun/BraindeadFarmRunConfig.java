@@ -10,6 +10,7 @@ import net.runelite.client.config.ConfigSection;
 public interface BraindeadFarmRunConfig extends Config
 {
 	String GROUP = "braindeadfarmrun";
+	String RUN_TYPES_KEY = "runTypes";
 	String HERB_SEED_KEY = "herbSeed";
 	String TREE_SEED_KEY = "treeSeed";
 	String FRUIT_TREE_SEED_KEY = "fruitTreeSeed";
@@ -49,6 +50,17 @@ public interface BraindeadFarmRunConfig extends Config
 	default boolean bottomlessCompostBucket()
 	{
 		return true;
+	}
+
+	@ConfigItem(
+		keyName = RUN_TYPES_KEY,
+		name = "Last run types",
+		description = "Patch types that were selected the last time the panel was used",
+		hidden = true
+	)
+	default String runTypes()
+	{
+		return "HERB,TREE,FRUIT_TREE,ALLOTMENT";
 	}
 
 	@ConfigItem(

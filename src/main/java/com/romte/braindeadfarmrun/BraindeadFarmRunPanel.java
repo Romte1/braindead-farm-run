@@ -155,10 +155,11 @@ class BraindeadFarmRunPanel extends PluginPanel
 		runs.add(allotments);
 		addSetup(c, runs, 0, 0, 0, 0);
 
-		herbs.addActionListener(event -> updateSelection());
-		trees.addActionListener(event -> updateSelection());
-		fruitTrees.addActionListener(event -> updateSelection());
-		allotments.addActionListener(event -> updateSelection());
+		applyRunTypes(config.runTypes());
+		herbs.addActionListener(event -> runTypesChanged());
+		trees.addActionListener(event -> runTypesChanged());
+		fruitTrees.addActionListener(event -> runTypesChanged());
+		allotments.addActionListener(event -> runTypesChanged());
 		updateSelection();
 
 		status.setForeground(TEXT);
@@ -432,9 +433,65 @@ class BraindeadFarmRunPanel extends PluginPanel
 		session.start(types);
 	}
 
+	private void runTypesChanged()
+	{
+		updateSelection();
+		configManager.setConfiguration(BraindeadFarmRunConfig.GROUP,
+			BraindeadFarmRunConfig.RUN_TYPES_KEY, runTypesValue(selectedTypes()));
+	}
+
 	private void updateSelection()
 	{
 		session.setSelectedTypes(selectedTypes());
+	}
+
+	private void applyRunTypes(String saved)
+	{
+		Set<PatchType> types = parseRunTypes(saved);
+		herbs.setSelected(types.contains(PatchType.HERB));
+		trees.setSelected(types.contains(PatchType.TREE));
+		fruitTrees.setSelected(types.contains(PatchType.FRUIT_TREE));
+		allotments.setSelected(types.contains(PatchType.ALLOTMENT));
+	}
+
+	private static Set<PatchType> parseRunTypes(String saved)
+	{
+		Set<PatchType> types = EnumSet.noneOf(PatchType.class);
+		if (saved == null)
+		{
+			types.addAll(EnumSet.allOf(PatchType.class));
+			return types;
+		}
+		for (String value : saved.split(","))
+		{
+			if (value.isBlank())
+			{
+				continue;
+			}
+			try
+			{
+				types.add(PatchType.valueOf(value.trim()));
+			}
+			catch (IllegalArgumentException ignored)
+			{
+				// Ignore values from an older or manually edited config.
+			}
+		}
+		return types;
+	}
+
+	private static String runTypesValue(Set<PatchType> types)
+	{
+		StringBuilder value = new StringBuilder();
+		for (PatchType type : types)
+		{
+			if (value.length() > 0)
+			{
+				value.append(',');
+			}
+			value.append(type.name());
+		}
+		return value.toString();
 	}
 
 	private Set<PatchType> selectedTypes()
