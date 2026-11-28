@@ -9,7 +9,6 @@ import java.awt.Graphics2D;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
-import net.runelite.api.GameObject;
 import net.runelite.api.NPC;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.ui.overlay.Overlay;
@@ -66,11 +65,8 @@ public class FarmRunMinimapOverlay extends Overlay
 				return farmer.getWorldLocation();
 			}
 		}
-		GameObject object = patchTracker.objectFor(patch);
-		if (object != null && object.getWorldLocation() != null)
-		{
-			return object.getWorldLocation();
-		}
-		return new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
+		WorldPoint target = runSession.currentNavigationPoint();
+		return target != null ? target
+			: new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
 	}
 }

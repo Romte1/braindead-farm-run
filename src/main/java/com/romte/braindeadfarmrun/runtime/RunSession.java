@@ -79,6 +79,7 @@ public class RunSession
 	private final Set<String> compostedPatches = new HashSet<>();
 	private final Set<String> paidPatches = new HashSet<>();
 	private StopGuide guide;
+	private volatile WorldPoint stopNavigationPoint;
 	private WorldPoint lastTarget;
 	private String lastGuideKey;
 
@@ -164,6 +165,8 @@ public class RunSession
 		{
 			guide.onPayment();
 		}
+		stopNavigationPoint = navigationPoint(patch);
+		log.debug("Navigation target for {}: {}", patch.getId(), stopNavigationPoint);
 		lastGuideKey = null;
 		updateCurrentTasks();
 	}
@@ -355,7 +358,7 @@ public class RunSession
 			}
 			else
 			{
-				start = point(route.get(index - 1));
+				start = navigationPoint(route.get(index - 1));
 			}
 			if (start != null)
 			{
@@ -418,6 +421,16 @@ public class RunSession
 	public WorldPoint currentNavigationPoint()
 	{
 		PatchDefinition patch = currentPatch();
+		if (patch != null && patch.getType() == PatchType.SEAWEED)
+		{
+			// The seaweed target changes when the player enters the underwater area.
+			return navigationPoint(patch);
+		}
+		WorldPoint point = stopNavigationPoint;
+		if (point != null)
+		{
+			return point;
+		}
 		return patch == null ? null : navigationPoint(patch);
 	}
 
@@ -453,7 +466,8 @@ public class RunSession
 		{
 			return SEAWEED_ACCESS;
 		}
-		return point(patch);
+		WorldPoint target = patchTracker.targetTileFor(patch);
+		return target != null ? target : point(patch);
 	}
 
 	private String findInventoryPlantItem(PatchDefinition patch)
@@ -668,6 +682,7 @@ public class RunSession
 		routeReady = false;
 		atStop = false;
 		guide = null;
+		stopNavigationPoint = null;
 		lastGuideKey = null;
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
@@ -689,6 +704,7 @@ public class RunSession
 		routeReady = false;
 		atStop = false;
 		guide = null;
+		stopNavigationPoint = null;
 		lastGuideKey = null;
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
@@ -719,7 +735,11 @@ public class RunSession
 			return;
 		}
 		PatchDefinition target = current.get(currentIndex);
-		WorldPoint point = navigationPoint(target);
+		WorldPoint point = currentNavigationPoint();
+		if (point == null)
+		{
+			return;
+		}
 		Map<String, Object> data = new HashMap<>();
 		data.put("target", point);
 		eventBus.post(new PluginMessage("shortestpath", "path", data));

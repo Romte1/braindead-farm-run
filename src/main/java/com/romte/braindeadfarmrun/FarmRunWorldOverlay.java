@@ -118,16 +118,11 @@ public class FarmRunWorldOverlay extends Overlay
 		if (object != null)
 		{
 			outlineRenderer.drawOutline(object, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
-			drawActionItem(graphics, object.getClickbox(), object.getLocalLocation());
-			if (showArrow)
-			{
-				drawArrowOverObject(graphics, object);
-			}
-			return null;
 		}
 
-		WorldPoint point = new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
-		LocalPoint local = LocalPoint.fromWorld(client.getTopLevelWorldView(), point);
+		WorldPoint target = runSession.currentNavigationPoint();
+		LocalPoint local = target == null ? null
+			: LocalPoint.fromWorld(client.getTopLevelWorldView(), target);
 		drawActionItem(graphics, null, local);
 		drawTileGuide(graphics, local, showArrow);
 		return null;

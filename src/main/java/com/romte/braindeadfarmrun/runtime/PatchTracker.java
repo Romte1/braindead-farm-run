@@ -22,11 +22,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
+import net.runelite.api.CollisionData;
+import net.runelite.api.CollisionDataFlag;
+import net.runelite.api.Constants;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.ObjectComposition;
+import net.runelite.api.Point;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameObjectDespawned;
@@ -63,6 +67,7 @@ public class PatchTracker
 	private final Map<String, Long> observedAt = new ConcurrentHashMap<>();
 	private final Map<GameObject, TrackedObject> tracked = new HashMap<>();
 	private final Set<NPC> farmers = new HashSet<>();
+	private final Set<NPC> leprechauns = new HashSet<>();
 	private final Set<Integer> farmingVarbits = new HashSet<>();
 	private volatile boolean dirty;
 
@@ -101,6 +106,7 @@ public class PatchTracker
 		observedAt.clear();
 		tracked.clear();
 		farmers.clear();
+		leprechauns.clear();
 		dirty = false;
 	}
 
@@ -189,6 +195,121 @@ public class PatchTracker
 		return best;
 	}
 
+	/**
+	 * A walkable tile beside the patch that is closest to the tool leprechaun. Allotment,
+	 * flower and herb produce is noted at the leprechaun, so this avoids sending the player to
+	 * the far side of a large patch. Client thread only.
+	 */
+	public WorldPoint targetTileFor(PatchDefinition patch)
+	{
+		if (patch == null)
+		{
+			return null;
+		}
+		GameObject object = objectFor(patch);
+		if (object == null)
+		{
+			return new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
+		}
+		WorldPoint fallback = object.getWorldLocation();
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null || worldView.getScene() == null)
+		{
+			return fallback;
+		}
+		NPC leprechaun = toolLeprechaunFor(patch);
+		WorldPoint leprechaunPoint = leprechaun == null ? null : leprechaun.getWorldLocation();
+
+		Point min = object.getSceneMinLocation();
+		Point max = object.getSceneMaxLocation();
+		int minX = min.getX();
+		int minY = min.getY();
+		int maxX = max.getX();
+		int maxY = max.getY();
+		int plane = patch.getPlane();
+		CollisionData[] collisionMaps = worldView.getCollisionMaps();
+		int[][] flags = collisionMaps != null && plane >= 0 && plane < collisionMaps.length
+			&& collisionMaps[plane] != null ? collisionMaps[plane].getFlags() : null;
+		int sceneSize = Constants.SCENE_SIZE;
+		WorldPoint best = null;
+		int bestDistance = Integer.MAX_VALUE;
+		for (int x = minX - 1; x <= maxX + 1; x++)
+		{
+			for (int y = minY - 1; y <= maxY + 1; y++)
+			{
+				if (x >= minX && x <= maxX && y >= minY && y <= maxY)
+				{
+					continue; // the patch itself is not a standing tile
+				}
+				if (x < 0 || y < 0 || x >= sceneSize || y >= sceneSize)
+				{
+					continue;
+				}
+				if (flags != null && (flags[x][y] & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0)
+				{
+					continue;
+				}
+				WorldPoint candidate = new WorldPoint(worldView.getBaseX() + x,
+					worldView.getBaseY() + y, plane);
+				if (candidate.equals(leprechaunPoint))
+				{
+					continue;
+				}
+				int compareX = leprechaunPoint == null ? patch.getX() : leprechaunPoint.getX();
+				int compareY = leprechaunPoint == null ? patch.getY() : leprechaunPoint.getY();
+				int distance = distance(candidate.getX(), candidate.getY(), compareX, compareY);
+				if (distance < bestDistance)
+				{
+					bestDistance = distance;
+					best = candidate;
+				}
+			}
+		}
+		return best == null ? fallback : best;
+	}
+
+	/** Nearest tool leprechaun loaded for a patch. Client thread only. */
+	public NPC toolLeprechaunFor(PatchDefinition patch)
+	{
+		if (patch == null)
+		{
+			return null;
+		}
+		NPC best = nearestLeprechaun(leprechauns, patch);
+		if (best != null)
+		{
+			return best;
+		}
+		WorldView worldView = client.getTopLevelWorldView();
+		return worldView == null || worldView.npcs() == null
+			? null : nearestLeprechaun(worldView.npcs(), patch);
+	}
+
+	private static NPC nearestLeprechaun(Iterable<? extends NPC> candidates, PatchDefinition patch)
+	{
+		NPC best = null;
+		int bestDistance = 24;
+		for (NPC npc : candidates)
+		{
+			if (!isToolLeprechaun(npc))
+			{
+				continue;
+			}
+			WorldPoint location = npc.getWorldLocation();
+			if (location == null || location.getPlane() != patch.getPlane())
+			{
+				continue;
+			}
+			int distance = distance(location.getX(), location.getY(), patch.getX(), patch.getY());
+			if (distance < bestDistance)
+			{
+				best = npc;
+				bestDistance = distance;
+			}
+		}
+		return best;
+	}
+
 	/** Nearest loaded farmer or gardener for a patch. Client thread only. */
 	public NPC farmerFor(PatchDefinition patch)
 	{
@@ -237,13 +358,14 @@ public class PatchTracker
 	@Subscribe
 	public void onNpcSpawned(NpcSpawned event)
 	{
-		trackFarmer(event.getNpc());
+		trackNpc(event.getNpc());
 	}
 
 	@Subscribe
 	public void onNpcDespawned(NpcDespawned event)
 	{
 		farmers.remove(event.getNpc());
+		leprechauns.remove(event.getNpc());
 	}
 
 	private void trackSceneNpcs()
@@ -253,17 +375,27 @@ public class PatchTracker
 		{
 			for (NPC npc : worldView.npcs())
 			{
-				trackFarmer(npc);
+				trackNpc(npc);
 			}
 		}
 	}
 
-	private void trackFarmer(NPC npc)
+	private void trackNpc(NPC npc)
 	{
 		if (isFarmer(npc))
 		{
 			farmers.add(npc);
 		}
+		if (isToolLeprechaun(npc))
+		{
+			leprechauns.add(npc);
+		}
+	}
+
+	private static boolean isToolLeprechaun(NPC npc)
+	{
+		String name = npc == null ? null : npc.getName();
+		return name != null && name.toLowerCase(Locale.ROOT).contains("tool leprechaun");
 	}
 
 	private static boolean isFarmer(NPC npc)
@@ -372,12 +504,14 @@ public class PatchTracker
 				save();
 				tracked.clear();
 				farmers.clear();
+				leprechauns.clear();
 				states.clear();
 				observedAt.clear();
 				break;
 			case LOADING:
 				tracked.clear();
 				farmers.clear();
+				leprechauns.clear();
 				break;
 			default:
 				break;
