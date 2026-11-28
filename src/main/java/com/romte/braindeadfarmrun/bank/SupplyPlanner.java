@@ -587,12 +587,14 @@ public class SupplyPlanner
 
 	private void addTravel(Map<String, MutableLine> lines, String name)
 	{
-		addTravelUse(lines, name, resolve(name));
+		int[] ids = explicitIds(name);
+		addTravelUse(lines, name, ids.length > 0 ? ids : resolve(name));
 	}
 
 	private void addChargedTravel(Map<String, MutableLine> lines, String name)
 	{
-		addTravelUse(lines, name, resolveCharged(name));
+		int[] ids = explicitIds(name);
+		addTravelUse(lines, name, ids.length > 0 ? ids : resolveCharged(name));
 	}
 
 	private void addTravelUse(Map<String, MutableLine> lines, String name, int[] ids)
@@ -620,6 +622,18 @@ public class SupplyPlanner
 	{
 		switch (name)
 		{
+			case "Explorer's ring":
+				return new int[]{
+					ItemID.LUMBRIDGE_RING_EASY, ItemID.LUMBRIDGE_RING_MEDIUM,
+					ItemID.LUMBRIDGE_RING_HARD, ItemID.LUMBRIDGE_RING_ELITE
+				};
+			case "Ardougne cloak":
+				return new int[]{
+					ItemID.ARDY_CAPE_EASY, ItemID.ARDY_CAPE_MEDIUM,
+					ItemID.ARDY_CAPE_HARD, ItemID.ARDY_CAPE_ELITE
+				};
+			case "Xeric's talisman":
+				return new int[]{ItemID.XERIC_TALISMAN, ItemID.XERIC_TALISMAN_EMPTY};
 			case "Pendant of ates":
 				return new int[]{ItemID.PENDANT_OF_ATES};
 			case "Divine rune pouch":
