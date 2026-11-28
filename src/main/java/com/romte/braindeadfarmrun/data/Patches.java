@@ -46,7 +46,6 @@ public final class Patches
 		new PatchDefinition("fossil_hardwood_middle", "Fossil Island hardwood (middle)", PatchType.HARDWOOD_TREE, 3710, 3837, 0, new int[]{14651, 14907, 14908, 15164, 14652, 14906, 14650, 15162, 15163}, 4772, null, null),
 		new PatchDefinition("fossil_hardwood_west", "Fossil Island hardwood (west)", PatchType.HARDWOOD_TREE, 3704, 3837, 0, new int[]{14651, 14907, 14908, 15164, 14652, 14906, 14650, 15162, 15163}, 4773, null, null),
 		new PatchDefinition("locus_oasis_hardwood", "Locus Oasis hardwood", PatchType.HARDWOOD_TREE, 1687, 2972, 0, new int[]{6702, 6446}, 4771, null, null),
-		new PatchDefinition("anglers_retreat_hardwood", "Anglers' Retreat hardwood", PatchType.HARDWOOD_TREE, 2471, 2703, 0, new int[]{9770}, 4771, null, null),
 
 		// Seaweed.
 		new PatchDefinition("fossil_seaweed_north", "Fossil Island seaweed (north)", PatchType.SEAWEED, 3734, 10276, 0, new int[]{15008}, 4771, null, null),
