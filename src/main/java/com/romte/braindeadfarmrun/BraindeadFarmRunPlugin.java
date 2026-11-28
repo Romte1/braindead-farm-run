@@ -239,7 +239,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 	public void onPluginMessage(PluginMessage event)
 	{
 		if (!"shortestpath".equals(event.getNamespace()) || !"result".equals(event.getName())
-			|| bankRefreshQueued)
+			|| bankRefreshQueued || !bankTab.isBankOpen())
 		{
 			return;
 		}

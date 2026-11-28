@@ -213,7 +213,38 @@ public class RunSession
 		}
 		beginStop();
 		sendCurrentTarget();
-		queryStops(index, point(route.get(index - 1)));
+		if (routeReady)
+		{
+			// The other legs already have their supply-mode results. Recalculating the whole
+			// remaining route here makes Shortest Path run one search per stop in the same tick.
+			log.debug("Advancing to stop {}: redirect only, requery current leg later",
+				index + 1);
+			clientThread.invokeLater(this::requeryCurrentLegForInventory);
+		}
+	}
+
+	private void requeryCurrentLegForInventory()
+	{
+		if (!active || !routeReady || index >= route.size())
+		{
+			return;
+		}
+		int currentIndex = index;
+		WorldPoint start;
+		if (currentIndex == 0)
+		{
+			Player player = client.getLocalPlayer();
+			start = player == null ? null : player.getWorldLocation();
+		}
+		else
+		{
+			start = point(route.get(currentIndex - 1));
+		}
+		if (start != null)
+		{
+			log.debug("Requerying current leg {} with the carried inventory", currentIndex + 1);
+			shortestPath.query(currentIndex, start, navigationPoint(route.get(currentIndex)));
+		}
 	}
 
 	public List<String> teleportsFor(int stopIndex)
