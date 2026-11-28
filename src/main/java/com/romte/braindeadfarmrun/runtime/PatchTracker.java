@@ -177,60 +177,6 @@ public class PatchTracker
 	}
 
 	/**
-	 * Loaded object that best represents the patch. A patch can have several objects sharing
-	 * its varbit (the soil, and one or more crop models). Prefer the largest object containing
-	 * the patch point so the overlay outlines the patch rather than a single plant.
-	 */
-	public GameObject objectFor(PatchDefinition patch)
-	{
-		if (patch == null)
-		{
-			return null;
-		}
-		WorldView worldView = client.getTopLevelWorldView();
-		GameObject best = null;
-		boolean bestContains = false;
-		int bestArea = -1;
-		int bestDistance = Integer.MAX_VALUE;
-		for (Map.Entry<GameObject, TrackedObject> entry : tracked.entrySet())
-		{
-			TrackedObject value = entry.getValue();
-			if (!value.patch.getId().equals(patch.getId()))
-			{
-				continue;
-			}
-			GameObject object = entry.getKey();
-			WorldPoint location = object.getWorldLocation();
-			if (location == null || location.getPlane() != patch.getPlane())
-			{
-				continue;
-			}
-			Point min = object.getSceneMinLocation();
-			Point max = object.getSceneMaxLocation();
-			int minX = worldView == null ? location.getX() : worldView.getBaseX() + min.getX();
-			int minY = worldView == null ? location.getY() : worldView.getBaseY() + min.getY();
-			int maxX = worldView == null ? location.getX() + object.sizeX() - 1
-				: worldView.getBaseX() + max.getX();
-			int maxY = worldView == null ? location.getY() + object.sizeY() - 1
-				: worldView.getBaseY() + max.getY();
-			boolean contains = patch.getX() >= minX && patch.getX() <= maxX
-				&& patch.getY() >= minY && patch.getY() <= maxY;
-			int area = (maxX - minX + 1) * (maxY - minY + 1);
-			int distance = distance(location.getX(), location.getY(), patch.getX(), patch.getY());
-			if ((contains && !bestContains)
-				|| (contains == bestContains && area > bestArea)
-				|| (contains == bestContains && area == bestArea && distance < bestDistance))
-			{
-				best = object;
-				bestContains = contains;
-				bestArea = area;
-				bestDistance = distance;
-			}
-		}
-		return best;
-	}
-
-	/**
 	 * Bounds of the soil patch near the patch coordinate. The farming varbit object is often
 	 * only a single crop model, so this scans the neighbouring tiles for the static patch
 	 * objects (including ground decorations) and returns their combined footprint.
@@ -444,10 +390,7 @@ public class PatchTracker
 		}
 		if (best == null)
 		{
-			GameObject object = objectFor(patch);
-			best = object == null
-				? new WorldPoint(patch.getX(), patch.getY(), patch.getPlane())
-				: object.getWorldLocation();
+			best = new WorldPoint(patch.getX(), patch.getY(), patch.getPlane());
 		}
 		log.debug("Target tile for {}: {} area={} leprechaun={} at {}",
 			patch.getId(), best, area, leprechaun == null ? "none" : leprechaun.getName(),
