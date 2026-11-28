@@ -8,8 +8,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Greedy nearest-neighbour route over the selected patches. Shortest Path still works out the
- * real walking/teleport route for each stop; this only decides the visit order.
+ * Groups patches that share a location, then walks the groups with a greedy nearest-neighbour
+ * order. Shortest Path still works out the real walking/teleport route for each stop; this only
+ * decides the visit order.
  */
 public final class RoutePlanner
 {
