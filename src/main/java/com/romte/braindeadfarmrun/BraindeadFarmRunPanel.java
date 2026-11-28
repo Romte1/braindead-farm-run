@@ -124,7 +124,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 
 		JLabel subtitle = new JLabel("Farm run planner");
 		subtitle.setForeground(MUTED);
-		subtitle.setFont(subtitle.getFont().deriveFont(11f));
+		subtitle.setFont(subtitle.getFont().deriveFont(13f));
 		addSetup(c, subtitle, 0, 0, 0, 0);
 
 		styleButton(startButton, START, START_BORDER);
@@ -324,10 +324,10 @@ class BraindeadFarmRunPanel extends PluginPanel
 		combo.setBackground(new Color(48, 48, 48));
 		combo.setForeground(TEXT);
 		combo.setFocusable(false);
-		combo.setFont(combo.getFont().deriveFont(11f));
+		combo.setFont(combo.getFont().deriveFont(13f));
 		combo.setMaximumRowCount(20);
-		combo.setPreferredSize(new Dimension(160, 24));
-		combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+		combo.setPreferredSize(new Dimension(160, 28));
+		combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
 		combo.setToolTipText("Best uses the highest-level crop your Farming level allows.");
 		combo.setRenderer(new DefaultListCellRenderer()
 		{
@@ -372,7 +372,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		row.setOpaque(false);
 		JLabel label = new JLabel(labelText);
 		label.setForeground(TEXT);
-		label.setFont(label.getFont().deriveFont(11f));
+		label.setFont(label.getFont().deriveFont(13f));
 		row.add(label, BorderLayout.NORTH);
 		row.add(combo, BorderLayout.CENTER);
 		return row;
@@ -391,7 +391,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 	{
 		JLabel label = new JLabel(text);
 		label.setForeground(MUTED);
-		label.setFont(label.getFont().deriveFont(Font.BOLD, 11f));
+		label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
 		label.setAlignmentX(Component.LEFT_ALIGNMENT);
 		label.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 		return label;
