@@ -1,5 +1,6 @@
 package com.romte.braindeadfarmrun.runtime;
 
+import com.romte.braindeadfarmrun.bank.SupplyPlanner;
 import com.romte.braindeadfarmrun.data.Patches;
 import com.romte.braindeadfarmrun.domain.patch.Crop;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
@@ -28,8 +29,10 @@ import net.runelite.api.Player;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
 import net.runelite.client.callback.ClientThread;
@@ -66,6 +69,7 @@ public class RunSession
 	private final PatchTracker patchTracker;
 	private final ItemManager itemManager;
 	private final SeedSelector seedSelector;
+	private final SupplyPlanner supplyPlanner;
 	private volatile List<PatchDefinition> route = Collections.emptyList();
 	private volatile Set<PatchType> selectedTypes = Collections.unmodifiableSet(
 		EnumSet.allOf(PatchType.class));
@@ -83,7 +87,7 @@ public class RunSession
 	@Inject
 	RunSession(Client client, ClientThread clientThread, EventBus eventBus,
 		ShortestPathService shortestPath, PatchTracker patchTracker, ItemManager itemManager,
-		SeedSelector seedSelector)
+		SeedSelector seedSelector, SupplyPlanner supplyPlanner)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
@@ -92,6 +96,7 @@ public class RunSession
 		this.patchTracker = patchTracker;
 		this.itemManager = itemManager;
 		this.seedSelector = seedSelector;
+		this.supplyPlanner = supplyPlanner;
 	}
 
 	public void start(Set<PatchType> types)
@@ -154,7 +159,8 @@ public class RunSession
 		}
 		PatchDefinition patch = route.get(index);
 		PatchState state = patchTracker.snapshot().get(patch.getId());
-		guide = new StopGuide(patch, state, seedSelector.cropFor(patch.getType()));
+		guide = new StopGuide(patch, state, seedSelector.cropFor(patch.getType()),
+			supplyPlanner.compostItemName());
 		lastGuideKey = null;
 		updateCurrentTasks();
 	}
@@ -566,6 +572,38 @@ public class RunSession
 			patchTracker.markPaid(route.get(index));
 			updateCurrentTasks();
 		}
+	}
+
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		if (!active || !atStop || guide == null || guide.phase() != StopGuide.Phase.COMPOST
+			|| !isCompostItem(event.getItemId()))
+		{
+			return;
+		}
+		PatchDefinition patch = currentPatch();
+		Player player = client.getLocalPlayer();
+		if (patch == null || player == null || player.getWorldLocation() == null)
+		{
+			return;
+		}
+		WorldPoint location = player.getWorldLocation();
+		if (distance(location.getX(), location.getY(), patch.getX(), patch.getY())
+			> ARRIVAL_RADIUS + 2)
+		{
+			return;
+		}
+		guide.onCompost();
+		updateCurrentTasks();
+	}
+
+	private static boolean isCompostItem(int itemId)
+	{
+		return itemId == ItemID.BUCKET_ULTRACOMPOST
+			|| itemId == ItemID.BUCKET_SUPERCOMPOST
+			|| itemId == ItemID.BUCKET_COMPOST
+			|| itemId == ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED;
 	}
 
 	private void startOnClientThread(Set<PatchType> types)

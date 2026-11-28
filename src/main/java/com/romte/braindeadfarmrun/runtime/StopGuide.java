@@ -20,6 +20,7 @@ final class StopGuide
 	{
 		CHECK_HEALTH,
 		REMOVE,
+		COMPOST,
 		PLANT,
 		PAY,
 		COMPLETE
@@ -43,17 +44,20 @@ final class StopGuide
 	private final boolean paymentNeeded;
 	private final boolean farmerRemoval;
 	private final boolean rakeNeeded;
+	private final String compostItemName;
 	private final List<Step> steps = new ArrayList<>();
 	private Phase phase;
 	private boolean paid;
 	private PatchState state;
 	private String plantItemName;
 
-	StopGuide(PatchDefinition patch, PatchState initialState, Crop plannedCrop)
+	StopGuide(PatchDefinition patch, PatchState initialState, Crop plannedCrop,
+		String compostItemName)
 	{
 		this.type = patch.getType();
 		this.state = initialState;
 		this.plannedCrop = plannedCrop;
+		this.compostItemName = compostItemName;
 		PatchState.Status status = status();
 		this.initialCrop = initialState == null ? null : initialState.getCrop();
 		Crop paymentCrop = paymentCrop();
@@ -119,6 +123,12 @@ final class StopGuide
 		{
 			steps.add(new Step(Phase.REMOVE, "Rake the weeds."));
 		}
+		if (status != PatchState.Status.GROWING && compostItemName != null
+			&& !compostItemName.isEmpty())
+		{
+			steps.add(new Step(Phase.COMPOST,
+				"Use " + compostItemName + " on the patch."));
+		}
 		if (status != PatchState.Status.GROWING)
 		{
 			String plant = plantItemName != null ? plantItemName
@@ -146,6 +156,10 @@ final class StopGuide
 		{
 			phase = Phase.REMOVE;
 		}
+		else if (hasStep(Phase.COMPOST))
+		{
+			phase = Phase.COMPOST;
+		}
 		else
 		{
 			phase = Phase.PLANT;
@@ -165,9 +179,9 @@ final class StopGuide
 		}
 		if (phase == Phase.REMOVE && isCleared())
 		{
-			phase = Phase.PLANT;
+			phase = hasStep(Phase.COMPOST) ? Phase.COMPOST : Phase.PLANT;
 		}
-		if (phase == Phase.PLANT && isNewlyPlanted(status))
+		if ((phase == Phase.COMPOST || phase == Phase.PLANT) && isNewlyPlanted(status))
 		{
 			phase = paymentNeeded ? Phase.PAY : Phase.COMPLETE;
 		}
@@ -183,6 +197,14 @@ final class StopGuide
 		{
 			paid = true;
 			phase = Phase.COMPLETE;
+		}
+	}
+
+	void onCompost()
+	{
+		if (phase == Phase.COMPOST)
+		{
+			phase = Phase.PLANT;
 		}
 	}
 
@@ -204,6 +226,8 @@ final class StopGuide
 			case PLANT:
 				return plantItemName != null ? plantItemName
 					: initialCrop == null ? null : initialCrop.getPlantedItemName();
+			case COMPOST:
+				return compostItemName;
 			case PAY:
 				Crop crop = paymentCrop();
 				return crop != null && crop.needsPayment() ? crop.getPaymentItem() : null;
@@ -309,12 +333,14 @@ final class StopGuide
 				return 0;
 			case REMOVE:
 				return 1;
-			case PLANT:
+			case COMPOST:
 				return 2;
-			case PAY:
+			case PLANT:
 				return 3;
-			default:
+			case PAY:
 				return 4;
+			default:
+				return 5;
 		}
 	}
 }

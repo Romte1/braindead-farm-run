@@ -240,6 +240,33 @@ public class SupplyPlanner
 		return false;
 	}
 
+	/** Compost or bottomless bucket the player should use before planting. */
+	public String compostItemName()
+	{
+		if (config.bottomlessCompostBucket())
+		{
+			return "Bottomless compost bucket";
+		}
+		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
+		if (owns(bank, inventory, worn, ItemID.BUCKET_ULTRACOMPOST))
+		{
+			return "Ultracompost";
+		}
+		if (owns(bank, inventory, worn, ItemID.BUCKET_SUPERCOMPOST))
+		{
+			return "Supercompost";
+		}
+		return "Compost";
+	}
+
+	private boolean owns(ItemContainer bank, ItemContainer inventory, ItemContainer worn,
+		int itemId)
+	{
+		return count(bank, itemId) + count(inventory, itemId) + count(worn, itemId) > 0;
+	}
+
 	/** Resolves an item name for the current-step overlays. */
 	public int[] itemIdsFor(String name)
 	{
