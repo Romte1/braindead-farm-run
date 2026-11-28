@@ -7,7 +7,8 @@ A RuneLite plugin for planning and tracking **allotment, herb, tree, fruit tree,
 
 ## What it will do
 
-- Track patch states and growth timers for allotments, herbs, trees and fruit trees.
+- Track patch states and growth timers for allotments, herbs, trees, fruit trees, calquats,
+  hardwood trees and seaweed.
 - Plan what to plant, what to bring and which patches to visit.
 - Remember the patch types selected for the last run.
 - Choose a specific seed or sapling per patch type; **Best** uses the highest-level crop your
