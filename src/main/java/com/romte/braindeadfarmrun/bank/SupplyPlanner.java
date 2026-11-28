@@ -101,7 +101,11 @@ public class SupplyPlanner
 		boolean trees = types.contains(PatchType.TREE);
 		boolean fruitTrees = types.contains(PatchType.FRUIT_TREE);
 
-		if (!autoweedEnabled() || hasWeeds(types, states))
+		int autoweed = client.getVarbitValue(VarbitID.FARMING_BLOCKWEEDS);
+		boolean weeds = hasWeeds(types, states);
+		log.debug("Supply plan rake check: autoweed={} enabled={} weeds={}", autoweed,
+			autoweed == 2, weeds);
+		if (autoweed != 2 || weeds)
 		{
 			add(lines, SupplyGroup.TOOLS, "Rake", 1, new int[]{ItemID.RAKE}, false);
 		}
@@ -124,7 +128,7 @@ public class SupplyPlanner
 				new int[]{ItemID.SECATEURS}, false);
 		}
 		addCompost(lines, bank, inventory, worn);
-		log.debug("Supply plan tools done: {} lines", lines.size());
+		log.debug("Supply plan tools done: {} lines: {}", lines.size(), lines.keySet());
 
 		for (PatchType type : types)
 		{
@@ -188,11 +192,6 @@ public class SupplyPlanner
 		}
 		log.debug("Supply plan finished: {} lines", result.size());
 		return result;
-	}
-
-	private boolean autoweedEnabled()
-	{
-		return client.getVarbitValue(VarbitID.FARMING_BLOCKWEEDS) == 2;
 	}
 
 	private static boolean hasWeeds(Set<PatchType> types, Map<String, PatchState> states)

@@ -60,6 +60,7 @@ public class PatchTracker
 	private final Gson gson;
 	private final BraindeadFarmRunConfig config;
 	private final Map<String, PatchState> states = new ConcurrentHashMap<>();
+	private final Map<String, Long> observedAt = new ConcurrentHashMap<>();
 	private final Map<GameObject, TrackedObject> tracked = new HashMap<>();
 	private final Set<NPC> farmers = new HashSet<>();
 	private final Set<Integer> farmingVarbits = new HashSet<>();
@@ -97,6 +98,7 @@ public class PatchTracker
 	{
 		save();
 		states.clear();
+		observedAt.clear();
 		tracked.clear();
 		farmers.clear();
 		dirty = false;
@@ -147,9 +149,11 @@ public class PatchTracker
 		}
 		int value = client.getVarbitValue(patch.getVarbit());
 		PatchState previous = states.get(patch.getId());
+		Instant now = Instant.now();
 		PatchState next = PatchStateMapper.apply(patch.getId(),
-			PatchStates.get().decode(patch.getType(), value), previous, Instant.now());
+			PatchStates.get().decode(patch.getType(), value), previous, now);
 		states.put(patch.getId(), next);
+		observedAt.put(patch.getId(), now.toEpochMilli());
 		dirty = true;
 	}
 
@@ -369,6 +373,7 @@ public class PatchTracker
 				tracked.clear();
 				farmers.clear();
 				states.clear();
+				observedAt.clear();
 				break;
 			case LOADING:
 				tracked.clear();
@@ -395,6 +400,7 @@ public class PatchTracker
 		PatchState next = PatchStateMapper.apply(patch.getId(),
 			PatchStates.get().decode(patch.getType(), value), previous, now);
 		states.put(patch.getId(), next);
+		observedAt.put(patch.getId(), now.toEpochMilli());
 		dirty = true;
 	}
 
@@ -415,12 +421,18 @@ public class PatchTracker
 			return;
 		}
 		states.clear();
+		observedAt.clear();
 		for (Map.Entry<String, StoredPatch> entry : stored.entrySet())
 		{
-			PatchState state = entry.getValue().toState(entry.getKey());
+			StoredPatch value = entry.getValue();
+			PatchState state = value.toState(entry.getKey());
 			if (state != null)
 			{
 				states.put(entry.getKey(), state);
+				if (value.observedAt > 0)
+				{
+					observedAt.put(entry.getKey(), value.observedAt);
+				}
 			}
 		}
 	}
@@ -461,13 +473,14 @@ public class PatchTracker
 			{
 				continue;
 			}
-			Instant changedAt = Instant.ofEpochSecond(changedAtSeconds);
-			PatchState previous = states.get(patch.getId());
-			if (previous != null && previous.getPlantedAt() != null
-				&& previous.getPlantedAt().toEpochMilli() >= changedAt.toEpochMilli() - 60_000L)
+			long changedAtMillis = changedAtSeconds * 1000L;
+			Instant changedAt = Instant.ofEpochMilli(changedAtMillis);
+			long lastObserved = observedAt.getOrDefault(patch.getId(), 0L);
+			if (lastObserved >= changedAtMillis - 60_000L)
 			{
 				continue; // our live data is newer
 			}
+			PatchState previous = states.get(patch.getId());
 			PatchStates.Decoded decoded = PatchStates.get().decode(patch.getType(), value);
 			if (decoded.getState() == PatchStates.State.UNKNOWN)
 			{
@@ -475,18 +488,18 @@ public class PatchTracker
 			}
 			if (decoded.getState() == PatchStates.State.EMPTY)
 			{
-				boolean newer = previous == null || previous.getPlantedAt() == null
-					|| previous.getPlantedAt().toEpochMilli() < changedAt.toEpochMilli() - 60_000L;
-				if (newer && previous != null && previous.getCrop() != null)
-				{
-					states.put(patch.getId(), PatchState.empty(patch.getId())
-						.withWeeds(decoded.getStage() > 0));
-					changed = true;
-				}
-				continue;
+				// Value 0 for a tree patch is already the first weedy stage. Record it even when
+				// there is no earlier crop, otherwise a patch that was never visited by this
+				// plugin loses its weeds and the bank tab omits the rake.
+				states.put(patch.getId(), PatchState.empty(patch.getId())
+					.withWeeds(decoded.getStage() > 0));
 			}
-			states.put(patch.getId(),
-				PatchStateMapper.applyAt(patch.getId(), decoded, previous, changedAt));
+			else
+			{
+				states.put(patch.getId(),
+					PatchStateMapper.applyAt(patch.getId(), decoded, previous, changedAt));
+			}
+			observedAt.put(patch.getId(), changedAtMillis);
 			changed = true;
 		}
 		if (changed)
@@ -504,7 +517,8 @@ public class PatchTracker
 		Map<String, StoredPatch> stored = new HashMap<>();
 		for (Map.Entry<String, PatchState> entry : states.entrySet())
 		{
-			stored.put(entry.getKey(), StoredPatch.from(entry.getValue()));
+			stored.put(entry.getKey(), StoredPatch.from(entry.getValue(),
+				observedAt.getOrDefault(entry.getKey(), 0L)));
 		}
 		configManager.setRSProfileConfiguration(BraindeadFarmRunConfig.GROUP, STATE_KEY,
 			gson.toJson(stored));
@@ -533,8 +547,9 @@ public class PatchTracker
 		private boolean checkHealth;
 		private boolean fell;
 		private boolean weedy;
+		private long observedAt;
 
-		private static StoredPatch from(PatchState state)
+		private static StoredPatch from(PatchState state, long observedAt)
 		{
 			StoredPatch stored = new StoredPatch();
 			stored.crop = state.getCrop() == null ? null : state.getCrop().name();
@@ -546,6 +561,7 @@ public class PatchTracker
 			stored.checkHealth = state.isCheckHealth();
 			stored.fell = state.isFell();
 			stored.weedy = state.isWeedy();
+			stored.observedAt = observedAt;
 			return stored;
 		}
 
