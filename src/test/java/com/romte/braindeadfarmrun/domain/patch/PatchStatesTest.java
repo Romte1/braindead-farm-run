@@ -90,6 +90,65 @@ public class PatchStatesTest
 	}
 
 	@Test
+	public void calquats()
+	{
+		PatchStates.Decoded weeds = states.decode(PatchType.CALQUAT, 0);
+		assertEquals(PatchStates.State.EMPTY, weeds.getState());
+
+		PatchStates.Decoded growing = states.decode(PatchType.CALQUAT, 4);
+		assertEquals(PatchStates.State.GROWING, growing.getState());
+		assertEquals(Crop.CALQUAT, growing.getCrop());
+
+		PatchStates.Decoded check = states.decode(PatchType.CALQUAT, 34);
+		assertEquals(PatchStates.State.READY, check.getState());
+		assertTrue(check.isCheckHealth());
+
+		PatchStates.Decoded ready = states.decode(PatchType.CALQUAT, 12);
+		assertEquals(PatchStates.State.READY, ready.getState());
+		assertFalse(ready.isCheckHealth());
+	}
+
+	@Test
+	public void hardwoodTrees()
+	{
+		PatchStates.Decoded growing = states.decode(PatchType.HARDWOOD_TREE, 8);
+		assertEquals(PatchStates.State.GROWING, growing.getState());
+		assertEquals(Crop.TEAK, growing.getCrop());
+
+		PatchStates.Decoded check = states.decode(PatchType.HARDWOOD_TREE, 15);
+		assertEquals(PatchStates.State.READY, check.getState());
+		assertTrue(check.isCheckHealth());
+
+		PatchStates.Decoded chop = states.decode(PatchType.HARDWOOD_TREE, 16);
+		assertEquals(PatchStates.State.READY, chop.getState());
+		assertTrue(chop.isFell());
+
+		PatchStates.Decoded stump = states.decode(PatchType.HARDWOOD_TREE, 17);
+		assertEquals(PatchStates.State.STUMP, stump.getState());
+
+		PatchStates.Decoded rosewood = states.decode(PatchType.HARDWOOD_TREE, 105);
+		assertEquals(Crop.ROSEWOOD, rosewood.getCrop());
+		assertEquals(PatchStates.State.GROWING, rosewood.getState());
+	}
+
+	@Test
+	public void seaweed()
+	{
+		PatchStates.Decoded growing = states.decode(PatchType.SEAWEED, 4);
+		assertEquals(PatchStates.State.GROWING, growing.getState());
+		assertEquals(Crop.SEAWEED, growing.getCrop());
+
+		PatchStates.Decoded ready = states.decode(PatchType.SEAWEED, 8);
+		assertEquals(PatchStates.State.READY, ready.getState());
+
+		PatchStates.Decoded diseased = states.decode(PatchType.SEAWEED, 11);
+		assertEquals(PatchStates.State.DISEASED, diseased.getState());
+
+		PatchStates.Decoded dead = states.decode(PatchType.SEAWEED, 14);
+		assertEquals(PatchStates.State.DEAD, dead.getState());
+	}
+
+	@Test
 	public void unknownValues()
 	{
 		assertEquals(PatchStates.State.UNKNOWN, states.decode(PatchType.HERB, 99999).getState());

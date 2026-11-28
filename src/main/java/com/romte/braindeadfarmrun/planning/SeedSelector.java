@@ -42,6 +42,8 @@ public class SeedSelector
 				return config.fruitTreeSeed();
 			case ALLOTMENT:
 				return config.allotmentSeed();
+			case HARDWOOD_TREE:
+				return config.hardwoodSeed();
 			default:
 				return SeedSelection.BEST;
 		}

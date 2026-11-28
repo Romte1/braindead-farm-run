@@ -69,11 +69,15 @@ class BraindeadFarmRunPanel extends PluginPanel
 	private final JCheckBox trees = checkbox("Trees", true);
 	private final JCheckBox fruitTrees = checkbox("Fruit trees", true);
 	private final JCheckBox allotments = checkbox("Allotments", true);
+	private final JCheckBox calquats = checkbox("Calquats", true);
+	private final JCheckBox hardwoodTrees = checkbox("Hardwood trees", true);
+	private final JCheckBox seaweeds = checkbox("Seaweeds", true);
 	private final JCheckBox bottomless = checkbox("Bottomless compost bucket", true);
 	private JComboBox<SeedOption> herbSeeds;
 	private JComboBox<SeedOption> treeSeeds;
 	private JComboBox<SeedOption> fruitTreeSeeds;
 	private JComboBox<SeedOption> allotmentSeeds;
+	private JComboBox<SeedOption> hardwoodSeeds;
 	private final JLabel status = new JLabel();
 	private Font bankWarningBase;
 	private float bankWarningSize = 13f;
@@ -97,7 +101,13 @@ class BraindeadFarmRunPanel extends PluginPanel
 		root.setOpaque(false);
 		buildSetup();
 		buildRun();
-		root.add(setup, "setup");
+		JScrollPane setupScroll = new JScrollPane(setup);
+		setupScroll.setBorder(null);
+		setupScroll.setOpaque(false);
+		setupScroll.getViewport().setOpaque(false);
+		setupScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+		setupScroll.getVerticalScrollBar().setUnitIncrement(16);
+		root.add(setupScroll, "setup");
 		root.add(run, "run");
 		add(root, BorderLayout.CENTER);
 
@@ -144,7 +154,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 		});
 		addSetup(c, bankWarning, 4, 0, 0, 0);
 
-		addSetup(c, section("Runs"), 14, 0, 0, 0);
+		addSetup(c, section("Select patches"), 14, 0, 0, 0);
 		JPanel runs = new JPanel();
 		runs.setLayout(new BoxLayout(runs, BoxLayout.Y_AXIS));
 		runs.setOpaque(false);
@@ -153,6 +163,9 @@ class BraindeadFarmRunPanel extends PluginPanel
 		runs.add(trees);
 		runs.add(fruitTrees);
 		runs.add(allotments);
+		runs.add(calquats);
+		runs.add(hardwoodTrees);
+		runs.add(seaweeds);
 		addSetup(c, runs, 0, 0, 0, 0);
 
 		applyRunTypes(config.runTypes());
@@ -160,6 +173,9 @@ class BraindeadFarmRunPanel extends PluginPanel
 		trees.addActionListener(event -> runTypesChanged());
 		fruitTrees.addActionListener(event -> runTypesChanged());
 		allotments.addActionListener(event -> runTypesChanged());
+		calquats.addActionListener(event -> runTypesChanged());
+		hardwoodTrees.addActionListener(event -> runTypesChanged());
+		seaweeds.addActionListener(event -> runTypesChanged());
 		updateSelection();
 
 		status.setForeground(TEXT);
@@ -182,10 +198,12 @@ class BraindeadFarmRunPanel extends PluginPanel
 		treeSeeds = seedCombo(PatchType.TREE, config.treeSeed());
 		fruitTreeSeeds = seedCombo(PatchType.FRUIT_TREE, config.fruitTreeSeed());
 		allotmentSeeds = seedCombo(PatchType.ALLOTMENT, config.allotmentSeed());
+		hardwoodSeeds = seedCombo(PatchType.HARDWOOD_TREE, config.hardwoodSeed());
 		addSetup(c, seedRow(PatchType.HERB.getDisplayName(), herbSeeds), 6, 8, 0, 0);
 		addSetup(c, seedRow(PatchType.TREE.getDisplayName(), treeSeeds), 6, 8, 0, 0);
 		addSetup(c, seedRow(PatchType.FRUIT_TREE.getDisplayName(), fruitTreeSeeds), 6, 8, 0, 0);
 		addSetup(c, seedRow(PatchType.ALLOTMENT.getDisplayName(), allotmentSeeds), 6, 8, 0, 0);
+		addSetup(c, seedRow(PatchType.HARDWOOD_TREE.getDisplayName(), hardwoodSeeds), 6, 8, 0, 0);
 
 		herbSeeds.addActionListener(event -> saveSeed(
 			BraindeadFarmRunConfig.HERB_SEED_KEY, herbSeeds));
@@ -195,6 +213,8 @@ class BraindeadFarmRunPanel extends PluginPanel
 			BraindeadFarmRunConfig.FRUIT_TREE_SEED_KEY, fruitTreeSeeds));
 		allotmentSeeds.addActionListener(event -> saveSeed(
 			BraindeadFarmRunConfig.ALLOTMENT_SEED_KEY, allotmentSeeds));
+		hardwoodSeeds.addActionListener(event -> saveSeed(
+			BraindeadFarmRunConfig.HARDWOOD_SEED_KEY, hardwoodSeeds));
 
 		JPanel filler = new JPanel();
 		filler.setOpaque(false);
@@ -452,6 +472,9 @@ class BraindeadFarmRunPanel extends PluginPanel
 		trees.setSelected(types.contains(PatchType.TREE));
 		fruitTrees.setSelected(types.contains(PatchType.FRUIT_TREE));
 		allotments.setSelected(types.contains(PatchType.ALLOTMENT));
+		calquats.setSelected(types.contains(PatchType.CALQUAT));
+		hardwoodTrees.setSelected(types.contains(PatchType.HARDWOOD_TREE));
+		seaweeds.setSelected(types.contains(PatchType.SEAWEED));
 	}
 
 	private static Set<PatchType> parseRunTypes(String saved)
@@ -513,6 +536,18 @@ class BraindeadFarmRunPanel extends PluginPanel
 		{
 			types.add(PatchType.ALLOTMENT);
 		}
+		if (calquats.isSelected())
+		{
+			types.add(PatchType.CALQUAT);
+		}
+		if (hardwoodTrees.isSelected())
+		{
+			types.add(PatchType.HARDWOOD_TREE);
+		}
+		if (seaweeds.isSelected())
+		{
+			types.add(PatchType.SEAWEED);
+		}
 		return types;
 	}
 
@@ -559,11 +594,15 @@ class BraindeadFarmRunPanel extends PluginPanel
 		trees.setEnabled(enabled);
 		fruitTrees.setEnabled(enabled);
 		allotments.setEnabled(enabled);
+		calquats.setEnabled(enabled);
+		hardwoodTrees.setEnabled(enabled);
+		seaweeds.setEnabled(enabled);
 		bottomless.setEnabled(enabled);
 		herbSeeds.setEnabled(enabled);
 		treeSeeds.setEnabled(enabled);
 		fruitTreeSeeds.setEnabled(enabled);
 		allotmentSeeds.setEnabled(enabled);
+		hardwoodSeeds.setEnabled(enabled);
 	}
 
 	private void startPreparingAnimation()

@@ -40,8 +40,8 @@ import net.runelite.client.ui.overlay.OverlayManager;
 @Slf4j
 @PluginDescriptor(
 	name = "Braindead Farm Run",
-	description = "Plans allotment, herb, tree and fruit tree runs: what to bring, where to go and when to return",
-	tags = {"farming", "farm run", "herb run", "tree run", "fruit tree", "allotment", "timers", "planner"}
+	description = "Plans allotment, herb, tree, fruit tree, calquat, hardwood and seaweed runs: what to bring, where to go and when to return",
+	tags = {"farming", "farm run", "herb run", "tree run", "fruit tree", "allotment", "calquat", "hardwood", "seaweed", "timers", "planner"}
 )
 public class BraindeadFarmRunPlugin extends Plugin
 {
@@ -334,7 +334,8 @@ public class BraindeadFarmRunPlugin extends Plugin
 		return BraindeadFarmRunConfig.HERB_SEED_KEY.equals(key)
 			|| BraindeadFarmRunConfig.TREE_SEED_KEY.equals(key)
 			|| BraindeadFarmRunConfig.FRUIT_TREE_SEED_KEY.equals(key)
-			|| BraindeadFarmRunConfig.ALLOTMENT_SEED_KEY.equals(key);
+			|| BraindeadFarmRunConfig.ALLOTMENT_SEED_KEY.equals(key)
+			|| BraindeadFarmRunConfig.HARDWOOD_SEED_KEY.equals(key);
 	}
 
 	@Provides

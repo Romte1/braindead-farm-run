@@ -103,6 +103,9 @@ public class SupplyPlanner
 		boolean allotments = types.contains(PatchType.ALLOTMENT);
 		boolean trees = types.contains(PatchType.TREE);
 		boolean fruitTrees = types.contains(PatchType.FRUIT_TREE);
+		boolean calquats = types.contains(PatchType.CALQUAT);
+		boolean hardwood = types.contains(PatchType.HARDWOOD_TREE);
+		boolean seaweed = types.contains(PatchType.SEAWEED);
 
 		int autoweed = client.getVarbitValue(VarbitID.FARMING_BLOCKWEEDS);
 		boolean weeds = hasWeeds(route, states);
@@ -116,19 +119,27 @@ public class SupplyPlanner
 		{
 			add(lines, SupplyGroup.TOOLS, "Seed dibber", 1, new int[]{ItemID.DIBBER}, false);
 		}
-		if (herbs || allotments || trees || fruitTrees)
+		if (herbs || allotments || trees || fruitTrees || calquats || hardwood || seaweed)
 		{
 			add(lines, SupplyGroup.TOOLS, "Spade", 1, new int[]{ItemID.SPADE}, false);
 		}
-		if (magicSecateurs && (herbs || trees || fruitTrees))
+		if (hardwood)
+		{
+			add(lines, SupplyGroup.TOOLS, "Axe", 1, explicitIds("Axe"), false);
+		}
+		if (magicSecateurs && (herbs || trees || fruitTrees || calquats || hardwood))
 		{
 			add(lines, SupplyGroup.TOOLS, "Magic secateurs", 1,
 				new int[]{ItemID.FAIRY_ENCHANTED_SECATEURS}, false);
 		}
-		else if (trees || fruitTrees)
+		else if (trees || fruitTrees || calquats || hardwood)
 		{
 			add(lines, SupplyGroup.TOOLS, "Secateurs", 1,
 				new int[]{ItemID.SECATEURS}, false);
+		}
+		if (seaweed)
+		{
+			addDivingGear(lines);
 		}
 		Instant now = Instant.now();
 		addCompost(lines, bank, inventory, worn, plantablePatches(route, states, now));
@@ -236,7 +247,8 @@ public class SupplyPlanner
 		{
 			return new int[0];
 		}
-		return resolve(name).clone();
+		int[] explicit = explicitIds(name);
+		return explicit.length > 0 ? explicit.clone() : resolve(name).clone();
 	}
 
 	/** Adds an item Shortest Path explicitly says the route needs to pick up. */
@@ -635,6 +647,13 @@ public class SupplyPlanner
 			case "Xeric's talisman":
 				// The inert version cannot teleport; only the charged talisman is useful.
 				return new int[]{ItemID.XERIC_TALISMAN};
+			case "Axe":
+				return new int[]{
+					ItemID.BRONZE_AXE, ItemID.IRON_AXE, ItemID.STEEL_AXE, ItemID.BLACK_AXE,
+					ItemID.MITHRIL_AXE, ItemID.ADAMANT_AXE, ItemID.RUNE_AXE, ItemID.DRAGON_AXE,
+					ItemID.INFERNAL_AXE, ItemID.CRYSTAL_AXE, ItemID._3A_AXE,
+					ItemID.TRAIL_GILDED_AXE, ItemID.SOULREAPER
+				};
 			case "Pendant of ates":
 				return new int[]{ItemID.PENDANT_OF_ATES};
 			case "Divine rune pouch":
@@ -1077,6 +1096,16 @@ public class SupplyPlanner
 		}
 	}
 
+	private static void addDivingGear(Map<String, MutableLine> lines)
+	{
+		add(lines, SupplyGroup.TOOLS, "Fishbowl helmet", 1,
+			new int[]{ItemID.HUNDRED_PIRATE_DIVING_HELMET, ItemID.UPGRADED_DIVING_HELMET}, false);
+		add(lines, SupplyGroup.TOOLS, "Diving apparatus", 1,
+			new int[]{ItemID.HUNDRED_PIRATE_DIVING_BACKPACK, ItemID.UPGRADED_DIVING_BACKPACK}, false);
+		add(lines, SupplyGroup.TOOLS, "Flippers", 1,
+			new int[]{ItemID.MUDSKIPPER_FLIPPERS, ItemID.DARK_FLIPPERS}, false);
+	}
+
 	private void addCompost(Map<String, MutableLine> lines, ItemContainer bank,
 		ItemContainer inventory, ItemContainer worn, int uses)
 	{
@@ -1281,9 +1310,14 @@ public class SupplyPlanner
 		{
 			case "Magic secateurs":
 				return "weapon";
+			case "Fishbowl helmet":
+				return "head";
+			case "Diving apparatus":
 			case "Farming cape":
 			case "Ardougne cloak":
 				return "cape";
+			case "Flippers":
+				return "feet";
 			case "Explorer's ring":
 			case "Ring of wealth":
 			case "Slayer ring":

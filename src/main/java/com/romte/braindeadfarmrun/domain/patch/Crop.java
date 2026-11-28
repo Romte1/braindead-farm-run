@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Every crop supported by the first release: allotments, herbs, trees and fruit trees.
+ * Every supported crop: allotments, herbs, trees, fruit trees, hardwood trees, calquats and
+ * seaweed.
  *
  * <p>Growth stages and tick lengths follow RuneLite's Time Tracking plugin. Levels and
  * gardener payments follow the OSRS Wiki. A crop is ready after {@code (stages - 1)} growth
@@ -57,7 +58,20 @@ public enum Crop
 	PINEAPPLE(PatchType.FRUIT_TREE, "Pineapple", 51, "Pineapple sapling", 7, "Watermelon", 10),
 	PAPAYA(PatchType.FRUIT_TREE, "Papaya", 57, "Papaya sapling", 7, "Pineapple", 10),
 	PALM(PatchType.FRUIT_TREE, "Palm", 68, "Palm sapling", 7, "Papaya fruit", 15),
-	DRAGONFRUIT(PatchType.FRUIT_TREE, "Dragonfruit", 81, "Dragonfruit sapling", 7, "Coconut", 15);
+	DRAGONFRUIT(PatchType.FRUIT_TREE, "Dragonfruit", 81, "Dragonfruit sapling", 7, "Coconut", 15),
+
+	// Hardwood trees: 640-minute ticks.
+	TEAK(PatchType.HARDWOOD_TREE, "Teak", 35, "Teak sapling", 8, "Limpwurt root", 15),
+	MAHOGANY(PatchType.HARDWOOD_TREE, "Mahogany", 55, "Mahogany sapling", 9, "Yanillian hops", 25),
+	CAMPHOR(PatchType.HARDWOOD_TREE, "Camphor", 66, "Camphor sapling", 9, "White berries", 10),
+	IRONWOOD(PatchType.HARDWOOD_TREE, "Ironwood", 80, "Ironwood sapling", 9, "Curry leaf", 10),
+	ROSEWOOD(PatchType.HARDWOOD_TREE, "Rosewood", 92, "Rosewood sapling", 10, "Dragonfruit", 8),
+
+	// Calquat: 160-minute ticks.
+	CALQUAT(PatchType.CALQUAT, "Calquat", 72, "Calquat sapling", 9, "Poison ivy berries", 8),
+
+	// Seaweed: 10-minute ticks.
+	SEAWEED(PatchType.SEAWEED, "Seaweed", 23, "Seaweed spore", 5, "Numulite", 200);
 
 	private static final Map<PatchType, List<Crop>> BY_TYPE;
 

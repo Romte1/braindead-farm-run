@@ -15,6 +15,7 @@ public interface BraindeadFarmRunConfig extends Config
 	String TREE_SEED_KEY = "treeSeed";
 	String FRUIT_TREE_SEED_KEY = "fruitTreeSeed";
 	String ALLOTMENT_SEED_KEY = "allotmentSeed";
+	String HARDWOOD_SEED_KEY = "hardwoodSeed";
 
 	@ConfigSection(
 		name = "Timers",
@@ -60,7 +61,7 @@ public interface BraindeadFarmRunConfig extends Config
 	)
 	default String runTypes()
 	{
-		return "HERB,TREE,FRUIT_TREE,ALLOTMENT";
+		return "HERB,TREE,FRUIT_TREE,ALLOTMENT,CALQUAT,HARDWOOD_TREE,SEAWEED";
 	}
 
 	@ConfigItem(
@@ -103,6 +104,17 @@ public interface BraindeadFarmRunConfig extends Config
 		hidden = true
 	)
 	default String allotmentSeed()
+	{
+		return SeedSelection.BEST;
+	}
+
+	@ConfigItem(
+		keyName = HARDWOOD_SEED_KEY,
+		name = "Hardwood sapling",
+		description = "Sapling used for hardwood tree patches",
+		hidden = true
+	)
+	default String hardwoodSeed()
 	{
 		return SeedSelection.BEST;
 	}

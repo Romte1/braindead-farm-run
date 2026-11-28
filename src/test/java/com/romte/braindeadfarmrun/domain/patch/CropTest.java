@@ -20,12 +20,17 @@ public class CropTest
 		assertEquals(40, Crop.POTATO.getGrowthMinutes());
 		assertEquals(160, Crop.OAK.getGrowthMinutes());
 		assertEquals(960, Crop.APPLE.getGrowthMinutes());
+		assertEquals(1280, Crop.CALQUAT.getGrowthMinutes());
+		assertEquals(4480, Crop.TEAK.getGrowthMinutes());
+		assertEquals(5120, Crop.MAHOGANY.getGrowthMinutes());
+		assertEquals(5760, Crop.ROSEWOOD.getGrowthMinutes());
+		assertEquals(40, Crop.SEAWEED.getGrowthMinutes());
 	}
 
 	@Test
 	public void allCropsHaveSaneData()
 	{
-		assertEquals(36, Crop.values().length);
+		assertEquals(43, Crop.values().length);
 		for (Crop crop : Crop.values())
 		{
 			assertTrue(crop.getDisplayName(), crop.getLevel() > 0);
@@ -48,6 +53,9 @@ public class CropTest
 		expected.put(PatchType.ALLOTMENT, 8);
 		expected.put(PatchType.TREE, 5);
 		expected.put(PatchType.FRUIT_TREE, 8);
+		expected.put(PatchType.CALQUAT, 1);
+		expected.put(PatchType.HARDWOOD_TREE, 5);
+		expected.put(PatchType.SEAWEED, 1);
 
 		int total = 0;
 		for (Map.Entry<PatchType, Integer> entry : expected.entrySet())

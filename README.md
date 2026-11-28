@@ -1,6 +1,6 @@
 # Braindead Farm Run
 
-A RuneLite plugin for planning and tracking **allotment, herb, tree and fruit tree** runs.
+A RuneLite plugin for planning and tracking **allotment, herb, tree, fruit tree, calquat, hardwood and seaweed** runs.
 
 > Status: early development. The project skeleton is in place; gameplay features are being
 > built phase by phase. See [PLAN.md](PLAN.md) for the roadmap.
@@ -22,7 +22,7 @@ A RuneLite plugin for planning and tracking **allotment, herb, tree and fruit tr
 
 v1 focuses on the essentials:
 
-- Allotment, herb, tree and fruit tree patches.
+- Allotment, herb, tree, fruit tree, calquat, hardwood tree and seaweed patches.
 - Timers, supplies, route and bank tab.
 - Optional Shortest Path integration.
 

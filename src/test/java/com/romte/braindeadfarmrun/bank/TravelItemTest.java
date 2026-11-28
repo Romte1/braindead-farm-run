@@ -58,7 +58,7 @@ public class TravelItemTest
 	{
 		for (String name : new String[]{
 			"Explorer's ring", "Ardougne cloak", "Xeric's talisman", "Pendant of ates",
-			"Divine rune pouch"
+			"Divine rune pouch", "Axe"
 		})
 		{
 			assertNotNull(name, SupplyPlanner.explicitIds(name));

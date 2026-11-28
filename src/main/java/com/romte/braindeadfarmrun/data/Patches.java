@@ -36,6 +36,22 @@ public final class Patches
 		new PatchDefinition("kastori_fruit", "Kastori fruit tree", PatchType.FRUIT_TREE, 1350, 3057, 0, new int[]{5423, 5167, 5424}, 4772, null, null),
 		new PatchDefinition("lletya_fruit", "Lletya fruit tree", PatchType.FRUIT_TREE, 2347, 3162, 0, new int[]{9265, 11103}, 4771, null, "Lletya bank"),
 
+		// Calquats.
+		new PatchDefinition("tai_bwo_calquat", "Tai Bwo Wannai calquat", PatchType.CALQUAT, 2796, 3101, 0, new int[]{11056}, 4771, "CKR", null),
+		new PatchDefinition("summer_shore_calquat", "Summer Shore calquat", PatchType.CALQUAT, 3128, 2405, 0, new int[]{12581, 12325, 12326, 12327, 12580, 12582, 12583, 12836, 12837, 12838, 12839, 13092, 13093, 13194}, 4773, "CJQ", null),
+		new PatchDefinition("kastori_calquat", "Kastori calquat", PatchType.CALQUAT, 1367, 3032, 0, new int[]{5423, 5167, 5424}, 4771, null, "Civitas illa Fortis bank"),
+
+		// Hardwood trees.
+		new PatchDefinition("fossil_hardwood_east", "Fossil Island hardwood (east)", PatchType.HARDWOOD_TREE, 3716, 3837, 0, new int[]{14651, 14907, 14908, 15164, 14652, 14906, 14650, 15162, 15163}, 4771, null, null),
+		new PatchDefinition("fossil_hardwood_middle", "Fossil Island hardwood (middle)", PatchType.HARDWOOD_TREE, 3710, 3837, 0, new int[]{14651, 14907, 14908, 15164, 14652, 14906, 14650, 15162, 15163}, 4772, null, null),
+		new PatchDefinition("fossil_hardwood_west", "Fossil Island hardwood (west)", PatchType.HARDWOOD_TREE, 3704, 3837, 0, new int[]{14651, 14907, 14908, 15164, 14652, 14906, 14650, 15162, 15163}, 4773, null, null),
+		new PatchDefinition("locus_oasis_hardwood", "Locus Oasis hardwood", PatchType.HARDWOOD_TREE, 1687, 2972, 0, new int[]{6702, 6446}, 4771, null, null),
+		new PatchDefinition("anglers_retreat_hardwood", "Anglers' Retreat hardwood", PatchType.HARDWOOD_TREE, 2471, 2703, 0, new int[]{9770}, 4771, null, null),
+
+		// Seaweed.
+		new PatchDefinition("fossil_seaweed_north", "Fossil Island seaweed (north)", PatchType.SEAWEED, 3734, 10276, 0, new int[]{15008}, 4771, null, null),
+		new PatchDefinition("fossil_seaweed_south", "Fossil Island seaweed (south)", PatchType.SEAWEED, 3734, 10266, 0, new int[]{15008}, 4772, null, null),
+
 		// Herbs.
 		new PatchDefinition("falador_herb", "Falador herb", PatchType.HERB, 3058, 3311, 0, new int[]{12083}, 4774, null, "Falador East bank"),
 		new PatchDefinition("catherby_herb", "Catherby herb", PatchType.HERB, 2813, 3463, 0, new int[]{11062, 11061, 11317, 11318}, 4774, null, "Catherby bank"),

@@ -24,8 +24,11 @@ public class PatchesTest
 		expected.put(PatchType.ALLOTMENT, 14);
 		expected.put(PatchType.TREE, 7);
 		expected.put(PatchType.FRUIT_TREE, 7);
+		expected.put(PatchType.CALQUAT, 3);
+		expected.put(PatchType.HARDWOOD_TREE, 5);
+		expected.put(PatchType.SEAWEED, 2);
 
-		assertEquals(38, Patches.all().size());
+		assertEquals(48, Patches.all().size());
 		int total = 0;
 		for (Map.Entry<PatchType, Integer> entry : expected.entrySet())
 		{

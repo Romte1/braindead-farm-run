@@ -22,6 +22,15 @@ public class SeedSelectionTest
 		assertEquals(Crop.POTATO, SeedSelection.best(PatchType.ALLOTMENT, 1));
 		assertEquals(Crop.SNAPE_GRASS, SeedSelection.best(PatchType.ALLOTMENT, 99));
 		assertEquals(Crop.DRAGONFRUIT, SeedSelection.best(PatchType.FRUIT_TREE, 99));
+
+		assertNull(SeedSelection.best(PatchType.HARDWOOD_TREE, 34));
+		assertEquals(Crop.TEAK, SeedSelection.best(PatchType.HARDWOOD_TREE, 35));
+		assertEquals(Crop.MAHOGANY, SeedSelection.best(PatchType.HARDWOOD_TREE, 55));
+		assertEquals(Crop.CAMPHOR, SeedSelection.best(PatchType.HARDWOOD_TREE, 66));
+		assertEquals(Crop.IRONWOOD, SeedSelection.best(PatchType.HARDWOOD_TREE, 80));
+		assertEquals(Crop.ROSEWOOD, SeedSelection.best(PatchType.HARDWOOD_TREE, 99));
+		assertEquals(Crop.CALQUAT, SeedSelection.best(PatchType.CALQUAT, 72));
+		assertEquals(Crop.SEAWEED, SeedSelection.best(PatchType.SEAWEED, 23));
 	}
 
 	@Test

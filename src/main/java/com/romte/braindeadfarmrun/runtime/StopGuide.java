@@ -63,7 +63,7 @@ final class StopGuide
 		this.farmerRemoval = type == PatchType.TREE && status == PatchState.Status.READY;
 		this.rakeNeeded = initialState != null && initialState.isWeedy();
 		this.plantItemName = plannedCrop == null ? null : plannedCrop.getPlantedItemName();
-		boolean checkHealth = type == PatchType.TREE && status == PatchState.Status.READY
+		boolean checkHealth = hasCheckHealth(type) && status == PatchState.Status.READY
 			&& initialState != null && initialState.isCheckHealth();
 
 		if (checkHealth)
@@ -82,6 +82,21 @@ final class StopGuide
 			{
 				steps.add(new Step(Phase.REMOVE,
 					"Harvest the fruit, then pay the farmer to remove the tree."));
+			}
+			else if (type == PatchType.HARDWOOD_TREE)
+			{
+				steps.add(new Step(Phase.REMOVE,
+					"Chop down the tree, then dig up the stump with a spade."));
+			}
+			else if (type == PatchType.CALQUAT)
+			{
+				steps.add(new Step(Phase.REMOVE,
+					"Harvest the fruit, then clear the patch with a spade."));
+			}
+			else if (type == PatchType.SEAWEED)
+			{
+				steps.add(new Step(Phase.REMOVE,
+					"Harvest the seaweed, then clear the patch with a spade."));
 			}
 			else
 			{
@@ -193,7 +208,16 @@ final class StopGuide
 				Crop crop = paymentCrop();
 				return crop != null && crop.needsPayment() ? crop.getPaymentItem() : null;
 			case REMOVE:
-				return farmerRemoval ? null : rakeNeeded ? "Rake" : "Spade";
+				if (farmerRemoval)
+				{
+					return null;
+				}
+				if (rakeNeeded)
+				{
+					return "Rake";
+				}
+				return type == PatchType.HARDWOOD_TREE
+					&& status() == PatchState.Status.READY ? "Axe" : "Spade";
 			default:
 				return null;
 		}
@@ -269,6 +293,12 @@ final class StopGuide
 	{
 		return state != null && state.getCrop() != null && state.getPlantedAt() != null
 			&& status == PatchState.Status.GROWING;
+	}
+
+	private static boolean hasCheckHealth(PatchType type)
+	{
+		return type == PatchType.TREE || type == PatchType.HARDWOOD_TREE
+			|| type == PatchType.CALQUAT;
 	}
 
 	private static int rank(Phase phase)
