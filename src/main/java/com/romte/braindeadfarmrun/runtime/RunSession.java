@@ -6,6 +6,7 @@ import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import com.romte.braindeadfarmrun.planning.RoutePlanner;
+import com.romte.braindeadfarmrun.planning.SeedSelector;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,6 +63,7 @@ public class RunSession
 	private final ShortestPathService shortestPath;
 	private final PatchTracker patchTracker;
 	private final ItemManager itemManager;
+	private final SeedSelector seedSelector;
 	private volatile List<PatchDefinition> route = Collections.emptyList();
 	private volatile Set<PatchType> selectedTypes = Collections.unmodifiableSet(
 		EnumSet.allOf(PatchType.class));
@@ -78,7 +80,8 @@ public class RunSession
 
 	@Inject
 	RunSession(Client client, ClientThread clientThread, EventBus eventBus,
-		ShortestPathService shortestPath, PatchTracker patchTracker, ItemManager itemManager)
+		ShortestPathService shortestPath, PatchTracker patchTracker, ItemManager itemManager,
+		SeedSelector seedSelector)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
@@ -86,6 +89,7 @@ public class RunSession
 		this.shortestPath = shortestPath;
 		this.patchTracker = patchTracker;
 		this.itemManager = itemManager;
+		this.seedSelector = seedSelector;
 	}
 
 	public void start(Set<PatchType> types)
@@ -148,7 +152,7 @@ public class RunSession
 		}
 		PatchDefinition patch = route.get(index);
 		PatchState state = patchTracker.snapshot().get(patch.getId());
-		guide = new StopGuide(patch, state);
+		guide = new StopGuide(patch, state, seedSelector.cropFor(patch.getType()));
 		lastGuideKey = null;
 		updateCurrentTasks();
 	}

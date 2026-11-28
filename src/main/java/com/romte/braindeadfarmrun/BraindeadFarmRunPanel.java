@@ -1,7 +1,9 @@
 package com.romte.braindeadfarmrun;
 
+import com.romte.braindeadfarmrun.domain.patch.Crop;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
+import com.romte.braindeadfarmrun.domain.patch.SeedSelection;
 import com.romte.braindeadfarmrun.runtime.RunSession;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -23,9 +25,12 @@ import java.util.function.BooleanSupplier;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
@@ -51,6 +56,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 	private static final Color LINE = new Color(70, 70, 70);
 
 	private final RunSession session;
+	private final BraindeadFarmRunConfig config;
 	private final ConfigManager configManager;
 	private final BooleanSupplier bankKnown;
 	private final CardLayout cards = new CardLayout();
@@ -64,6 +70,10 @@ class BraindeadFarmRunPanel extends PluginPanel
 	private final JCheckBox fruitTrees = checkbox("Fruit trees", true);
 	private final JCheckBox allotments = checkbox("Allotments", true);
 	private final JCheckBox bottomless = checkbox("Bottomless compost bucket", true);
+	private JComboBox<SeedOption> herbSeeds;
+	private JComboBox<SeedOption> treeSeeds;
+	private JComboBox<SeedOption> fruitTreeSeeds;
+	private JComboBox<SeedOption> allotmentSeeds;
 	private final JLabel status = new JLabel();
 	private Font bankWarningBase;
 	private float bankWarningSize = 13f;
@@ -78,6 +88,7 @@ class BraindeadFarmRunPanel extends PluginPanel
 	{
 		super(false);
 		this.session = session;
+		this.config = config;
 		this.configManager = configManager;
 		this.bankKnown = bankKnown;
 		bottomless.setSelected(config.bottomlessCompostBucket());
@@ -162,6 +173,27 @@ class BraindeadFarmRunPanel extends PluginPanel
 		bottomless.addActionListener(event -> configManager.setConfiguration(
 			BraindeadFarmRunConfig.GROUP, "bottomlessCompostBucket", bottomless.isSelected()));
 		addSetup(c, bottomless, 0, 0, 0, 0);
+
+		addSetup(c, separator(), 12, 0, 0, 0);
+		addSetup(c, section("Custom Seeds"), 8, 0, 0, 0);
+
+		herbSeeds = seedCombo(PatchType.HERB, config.herbSeed());
+		treeSeeds = seedCombo(PatchType.TREE, config.treeSeed());
+		fruitTreeSeeds = seedCombo(PatchType.FRUIT_TREE, config.fruitTreeSeed());
+		allotmentSeeds = seedCombo(PatchType.ALLOTMENT, config.allotmentSeed());
+		addSetup(c, seedRow(PatchType.HERB.getDisplayName(), herbSeeds), 6, 8, 0, 0);
+		addSetup(c, seedRow(PatchType.TREE.getDisplayName(), treeSeeds), 6, 8, 0, 0);
+		addSetup(c, seedRow(PatchType.FRUIT_TREE.getDisplayName(), fruitTreeSeeds), 6, 8, 0, 0);
+		addSetup(c, seedRow(PatchType.ALLOTMENT.getDisplayName(), allotmentSeeds), 6, 8, 0, 0);
+
+		herbSeeds.addActionListener(event -> saveSeed(
+			BraindeadFarmRunConfig.HERB_SEED_KEY, herbSeeds));
+		treeSeeds.addActionListener(event -> saveSeed(
+			BraindeadFarmRunConfig.TREE_SEED_KEY, treeSeeds));
+		fruitTreeSeeds.addActionListener(event -> saveSeed(
+			BraindeadFarmRunConfig.FRUIT_TREE_SEED_KEY, fruitTreeSeeds));
+		allotmentSeeds.addActionListener(event -> saveSeed(
+			BraindeadFarmRunConfig.ALLOTMENT_SEED_KEY, allotmentSeeds));
 
 		JPanel filler = new JPanel();
 		filler.setOpaque(false);
@@ -285,6 +317,76 @@ class BraindeadFarmRunPanel extends PluginPanel
 		return box;
 	}
 
+	private JComboBox<SeedOption> seedCombo(PatchType type, String selected)
+	{
+		JComboBox<SeedOption> combo = new JComboBox<>();
+		combo.setOpaque(true);
+		combo.setBackground(new Color(48, 48, 48));
+		combo.setForeground(TEXT);
+		combo.setFocusable(false);
+		combo.setFont(combo.getFont().deriveFont(11f));
+		combo.setMaximumRowCount(20);
+		combo.setPreferredSize(new Dimension(160, 24));
+		combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+		combo.setToolTipText("Best uses the highest-level crop your Farming level allows.");
+		combo.setRenderer(new DefaultListCellRenderer()
+		{
+			@Override
+			public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+				boolean selected, boolean focus)
+			{
+				JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index,
+					selected, focus);
+				label.setBackground(selected ? new Color(76, 76, 76) : new Color(48, 48, 48));
+				label.setForeground(TEXT);
+				label.setBorder(BorderFactory.createEmptyBorder(1, 6, 1, 6));
+				return label;
+			}
+		});
+		combo.addItem(new SeedOption(SeedSelection.BEST, "Best (default)"));
+		for (Crop crop : Crop.forType(type))
+		{
+			combo.addItem(new SeedOption(crop.name(), SeedSelection.label(crop)));
+		}
+		selectSeed(combo, selected);
+		return combo;
+	}
+
+	private static void selectSeed(JComboBox<SeedOption> combo, String selected)
+	{
+		String value = selected == null || selected.isEmpty() ? SeedSelection.BEST : selected;
+		for (int i = 0; i < combo.getItemCount(); i++)
+		{
+			if (combo.getItemAt(i).value.equals(value))
+			{
+				combo.setSelectedIndex(i);
+				return;
+			}
+		}
+		combo.setSelectedIndex(0);
+	}
+
+	private static JPanel seedRow(String labelText, JComboBox<SeedOption> combo)
+	{
+		JPanel row = new JPanel(new BorderLayout(0, 2));
+		row.setOpaque(false);
+		JLabel label = new JLabel(labelText);
+		label.setForeground(TEXT);
+		label.setFont(label.getFont().deriveFont(11f));
+		row.add(label, BorderLayout.NORTH);
+		row.add(combo, BorderLayout.CENTER);
+		return row;
+	}
+
+	private void saveSeed(String key, JComboBox<SeedOption> combo)
+	{
+		SeedOption option = (SeedOption) combo.getSelectedItem();
+		if (option != null)
+		{
+			configManager.setConfiguration(BraindeadFarmRunConfig.GROUP, key, option.value);
+		}
+	}
+
 	private static JLabel section(String text)
 	{
 		JLabel label = new JLabel(text);
@@ -401,6 +503,10 @@ class BraindeadFarmRunPanel extends PluginPanel
 		fruitTrees.setEnabled(enabled);
 		allotments.setEnabled(enabled);
 		bottomless.setEnabled(enabled);
+		herbSeeds.setEnabled(enabled);
+		treeSeeds.setEnabled(enabled);
+		fruitTreeSeeds.setEnabled(enabled);
+		allotmentSeeds.setEnabled(enabled);
 	}
 
 	private void startPreparingAnimation()
@@ -491,5 +597,23 @@ class BraindeadFarmRunPanel extends PluginPanel
 	void setBottomless(boolean selected)
 	{
 		SwingUtilities.invokeLater(() -> bottomless.setSelected(selected));
+	}
+
+	private static final class SeedOption
+	{
+		private final String value;
+		private final String label;
+
+		private SeedOption(String value, String label)
+		{
+			this.value = value;
+			this.label = label;
+		}
+
+		@Override
+		public String toString()
+		{
+			return label;
+		}
 	}
 }

@@ -9,6 +9,8 @@ A RuneLite plugin for planning and tracking **allotment, herb, tree and fruit tr
 
 - Track patch states and growth timers for allotments, herbs, trees and fruit trees.
 - Plan what to plant, what to bring and which patches to visit.
+- Choose a specific seed or sapling per patch type; **Best** uses the highest-level crop your
+  Farming level allows.
 - Order the route and pick the best available teleport for each leg.
 - Group supplies into equipment, tools, seeds, runes, travel and payments.
 - Show the next step and highlight the relevant patch and inventory items.

@@ -115,7 +115,7 @@ public class BraindeadFarmRunPlugin extends Plugin
 
 		bankTab.startUp(() -> runSession.allResultsReady()
 			? supplyPlanner.plan(runSession.selectedTypes(), patchTracker.snapshot(),
-				runSession.allTeleportLines(), runSession.allRequiredItems())
+				runSession.stops(), runSession.allTeleportLines(), runSession.allRequiredItems())
 			: null);
 		bankTab.setEnabled(true);
 		overlayManager.add(infoOverlay);
@@ -309,8 +309,11 @@ public class BraindeadFarmRunPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (BraindeadFarmRunConfig.GROUP.equals(event.getGroup())
-			&& "bottomlessCompostBucket".equals(event.getKey()))
+		if (!BraindeadFarmRunConfig.GROUP.equals(event.getGroup()))
+		{
+			return;
+		}
+		if ("bottomlessCompostBucket".equals(event.getKey()))
 		{
 			bankTab.invalidatePlan();
 			bankTab.refresh();
@@ -319,6 +322,19 @@ public class BraindeadFarmRunPlugin extends Plugin
 				panel.setBottomless(config.bottomlessCompostBucket());
 			}
 		}
+		else if (isSeedKey(event.getKey()))
+		{
+			bankTab.invalidatePlan();
+			bankTab.refresh();
+		}
+	}
+
+	private static boolean isSeedKey(String key)
+	{
+		return BraindeadFarmRunConfig.HERB_SEED_KEY.equals(key)
+			|| BraindeadFarmRunConfig.TREE_SEED_KEY.equals(key)
+			|| BraindeadFarmRunConfig.FRUIT_TREE_SEED_KEY.equals(key)
+			|| BraindeadFarmRunConfig.ALLOTMENT_SEED_KEY.equals(key);
 	}
 
 	@Provides

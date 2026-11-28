@@ -39,6 +39,7 @@ final class StopGuide
 
 	private final PatchType type;
 	private final Crop initialCrop;
+	private final Crop plannedCrop;
 	private final boolean paymentNeeded;
 	private final boolean farmerRemoval;
 	private final boolean rakeNeeded;
@@ -48,17 +49,20 @@ final class StopGuide
 	private PatchState state;
 	private String plantItemName;
 
-	StopGuide(PatchDefinition patch, PatchState initialState)
+	StopGuide(PatchDefinition patch, PatchState initialState, Crop plannedCrop)
 	{
 		this.type = patch.getType();
 		this.state = initialState;
+		this.plannedCrop = plannedCrop;
 		PatchState.Status status = status();
 		this.initialCrop = initialState == null ? null : initialState.getCrop();
-		this.paymentNeeded = initialCrop != null
-			? initialCrop.needsPayment()
+		Crop paymentCrop = paymentCrop();
+		this.paymentNeeded = paymentCrop != null
+			? paymentCrop.needsPayment()
 			: type != PatchType.HERB;
 		this.farmerRemoval = type == PatchType.TREE && status == PatchState.Status.READY;
 		this.rakeNeeded = initialState != null && initialState.isWeedy();
+		this.plantItemName = plannedCrop == null ? null : plannedCrop.getPlantedItemName();
 		boolean checkHealth = type == PatchType.TREE && status == PatchState.Status.READY
 			&& initialState != null && initialState.isCheckHealth();
 
@@ -102,7 +106,8 @@ final class StopGuide
 		}
 		if (status != PatchState.Status.GROWING)
 		{
-			String plant = initialCrop == null ? "your sapling or seeds"
+			String plant = plantItemName != null ? plantItemName
+				: initialCrop == null ? "your sapling or seeds"
 				: initialCrop.getPlantedItemName();
 			steps.add(new Step(Phase.PLANT, "Plant " + plant + "."));
 		}
@@ -185,8 +190,8 @@ final class StopGuide
 				return plantItemName != null ? plantItemName
 					: initialCrop == null ? null : initialCrop.getPlantedItemName();
 			case PAY:
-				return initialCrop != null && initialCrop.needsPayment()
-					? initialCrop.getPaymentItem() : null;
+				Crop crop = paymentCrop();
+				return crop != null && crop.needsPayment() ? crop.getPaymentItem() : null;
 			case REMOVE:
 				return farmerRemoval ? null : rakeNeeded ? "Rake" : "Spade";
 			default:
@@ -226,6 +231,11 @@ final class StopGuide
 			lines.add(marker + label);
 		}
 		return lines;
+	}
+
+	private Crop paymentCrop()
+	{
+		return plannedCrop != null ? plannedCrop : initialCrop;
 	}
 
 	private boolean hasStep(Phase target)

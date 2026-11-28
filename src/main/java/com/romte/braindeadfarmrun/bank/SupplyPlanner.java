@@ -1,11 +1,11 @@
 package com.romte.braindeadfarmrun.bank;
 
 import com.romte.braindeadfarmrun.BraindeadFarmRunConfig;
-import com.romte.braindeadfarmrun.data.Patches;
 import com.romte.braindeadfarmrun.domain.patch.Crop;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
+import com.romte.braindeadfarmrun.planning.SeedSelector;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -66,16 +66,19 @@ public class SupplyPlanner
 	private final Client client;
 	private final ItemManager itemManager;
 	private final BraindeadFarmRunConfig config;
+	private final SeedSelector seedSelector;
 	private final Map<String, int[]> resolveCache = new ConcurrentHashMap<>();
 	private final Map<String, int[]> chargedCache = new ConcurrentHashMap<>();
 	private volatile boolean magicSecateurs;
 
 	@Inject
-	SupplyPlanner(Client client, ItemManager itemManager, BraindeadFarmRunConfig config)
+	SupplyPlanner(Client client, ItemManager itemManager, BraindeadFarmRunConfig config,
+		SeedSelector seedSelector)
 	{
 		this.client = client;
 		this.itemManager = itemManager;
 		this.config = config;
+		this.seedSelector = seedSelector;
 	}
 
 	/** Must be called on the client thread outside a script (Quest.getState runs a script). */
@@ -85,13 +88,13 @@ public class SupplyPlanner
 	}
 
 	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states,
-		List<String> transports, List<Integer> requiredItems)
+		List<PatchDefinition> route, List<String> transports, List<Integer> requiredItems)
 	{
 		ItemContainer bank = client.getItemContainer(InventoryID.BANK);
 		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
 		ItemContainer worn = client.getItemContainer(InventoryID.WORN);
-		log.debug("Supply plan starting: types={} transports={} required={}", types.size(),
-			transports.size(), requiredItems.size());
+		log.debug("Supply plan starting: types={} route={} transports={} required={}", types.size(),
+			route.size(), transports.size(), requiredItems.size());
 
 		Map<String, MutableLine> lines = new LinkedHashMap<>();
 		Map<String, Integer> runeNeeds = new LinkedHashMap<>();
@@ -102,7 +105,7 @@ public class SupplyPlanner
 		boolean fruitTrees = types.contains(PatchType.FRUIT_TREE);
 
 		int autoweed = client.getVarbitValue(VarbitID.FARMING_BLOCKWEEDS);
-		boolean weeds = hasWeeds(types, states);
+		boolean weeds = hasWeeds(route, states);
 		log.debug("Supply plan rake check: autoweed={} enabled={} weeds={}", autoweed,
 			autoweed == 2, weeds);
 		if (autoweed != 2 || weeds)
@@ -130,16 +133,19 @@ public class SupplyPlanner
 		addCompost(lines, bank, inventory, worn);
 		log.debug("Supply plan tools done: {} lines: {}", lines.size(), lines.keySet());
 
-		for (PatchType type : types)
+		Instant now = Instant.now();
+		for (PatchDefinition patch : route)
 		{
-			for (PatchDefinition patch : Patches.forType(type))
+			PatchState state = states.get(patch.getId());
+			PatchState.Status status = state == null ? PatchState.Status.EMPTY
+				: state.statusAt(now);
+			if (status == PatchState.Status.GROWING)
 			{
-				PatchState state = states.get(patch.getId());
-				if (state == null || state.getCrop() == null)
-				{
-					continue;
-				}
-				Crop crop = state.getCrop();
+				continue;
+			}
+			Crop crop = seedSelector.cropFor(patch.getType());
+			if (crop != null)
+			{
 				add(lines, SupplyGroup.SEEDS, crop.getPlantedItemName(),
 					crop.getSeedsPerPatch(), resolve(crop.getPlantedItemName()), false);
 				if (crop.needsPayment())
@@ -147,13 +153,13 @@ public class SupplyPlanner
 					add(lines, SupplyGroup.PAYMENTS, crop.getPaymentItem(),
 						crop.getPaymentQuantity(), resolve(crop.getPaymentItem()), true);
 				}
-				if ((type == PatchType.TREE || type == PatchType.FRUIT_TREE)
-					&& state.statusAt(Instant.now()) == PatchState.Status.READY)
-				{
-					// Gardeners charge 200 coins to instantly remove a grown tree or fruit tree.
-					add(lines, SupplyGroup.PAYMENTS, "Coins", 200,
-						new int[]{ItemID.COINS}, false);
-				}
+			}
+			if ((patch.getType() == PatchType.TREE || patch.getType() == PatchType.FRUIT_TREE)
+				&& status == PatchState.Status.READY)
+			{
+				// Gardeners charge 200 coins to instantly remove a grown tree or fruit tree.
+				add(lines, SupplyGroup.PAYMENTS, "Coins", 200,
+					new int[]{ItemID.COINS}, false);
 			}
 		}
 
@@ -194,17 +200,14 @@ public class SupplyPlanner
 		return result;
 	}
 
-	private static boolean hasWeeds(Set<PatchType> types, Map<String, PatchState> states)
+	private static boolean hasWeeds(List<PatchDefinition> route, Map<String, PatchState> states)
 	{
-		for (PatchType type : types)
+		for (PatchDefinition patch : route)
 		{
-			for (PatchDefinition patch : Patches.forType(type))
+			PatchState state = states.get(patch.getId());
+			if (state != null && state.isWeedy())
 			{
-				PatchState state = states.get(patch.getId());
-				if (state != null && state.isWeedy())
-				{
-					return true;
-				}
+				return true;
 			}
 		}
 		return false;

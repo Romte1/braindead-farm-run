@@ -1,5 +1,6 @@
 package com.romte.braindeadfarmrun;
 
+import com.romte.braindeadfarmrun.domain.patch.SeedSelection;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -9,6 +10,10 @@ import net.runelite.client.config.ConfigSection;
 public interface BraindeadFarmRunConfig extends Config
 {
 	String GROUP = "braindeadfarmrun";
+	String HERB_SEED_KEY = "herbSeed";
+	String TREE_SEED_KEY = "treeSeed";
+	String FRUIT_TREE_SEED_KEY = "fruitTreeSeed";
+	String ALLOTMENT_SEED_KEY = "allotmentSeed";
 
 	@ConfigSection(
 		name = "Timers",
@@ -44,6 +49,50 @@ public interface BraindeadFarmRunConfig extends Config
 	default boolean bottomlessCompostBucket()
 	{
 		return true;
+	}
+
+	@ConfigItem(
+		keyName = HERB_SEED_KEY,
+		name = "Herbs seed",
+		description = "Seed used for herb patches",
+		hidden = true
+	)
+	default String herbSeed()
+	{
+		return SeedSelection.BEST;
+	}
+
+	@ConfigItem(
+		keyName = TREE_SEED_KEY,
+		name = "Trees sapling",
+		description = "Sapling used for tree patches",
+		hidden = true
+	)
+	default String treeSeed()
+	{
+		return SeedSelection.BEST;
+	}
+
+	@ConfigItem(
+		keyName = FRUIT_TREE_SEED_KEY,
+		name = "Fruit trees sapling",
+		description = "Sapling used for fruit tree patches",
+		hidden = true
+	)
+	default String fruitTreeSeed()
+	{
+		return SeedSelection.BEST;
+	}
+
+	@ConfigItem(
+		keyName = ALLOTMENT_SEED_KEY,
+		name = "Allotments seed",
+		description = "Seed used for allotment patches",
+		hidden = true
+	)
+	default String allotmentSeed()
+	{
+		return SeedSelection.BEST;
 	}
 
 	@ConfigSection(
