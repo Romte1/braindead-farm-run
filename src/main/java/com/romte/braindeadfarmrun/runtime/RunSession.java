@@ -30,10 +30,7 @@ import net.runelite.api.Player;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetModelType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
@@ -48,7 +45,7 @@ import net.runelite.client.game.ItemManager;
 @Singleton
 public class RunSession
 {
-	private static final int ARRIVAL_RADIUS = 6;
+	private static final int ARRIVAL_RADIUS = 10;
 	private static final WorldPoint SEAWEED_ACCESS = new WorldPoint(3764, 3899, 0);
 	private static final int SEAWEED_REGION = 15008;
 	private static final String PREFIX = "<col=00bfff>Braindead Farm Run:</col> ";
@@ -58,12 +55,8 @@ public class RunSession
 		"You treat the .+ with (?:ultra|super)?compost\\.");
 	private static final Pattern COMPOST_ALREADY_APPLIED = Pattern.compile(
 		"This .+ has already been (?:treated|fertilised) with (?:ultra|super)?compost.*");
-	private static final Set<String> PAYMENT_TEXT = Set.of(
-		"That'll do nicely, sir. Leave it with me - I'll make sure<br>that patch grows for you.",
-		"That'll do nicely, madam. Leave it with me - I'll make<br>sure that patch grows for you.",
-		"That'll do nicely. Leave it with me - I'll make sure that<br>patch grows for you.",
-		"That'll do nicely, iknami. Leave it with me - I'll make<br>sure that patch grows for you.",
-		"Alright, leave it with me. I'll look after that nursery for<br>you.");
+	private static final Pattern PAYMENT_MADE = Pattern.compile(
+		"You pay the gardener .+ to protect the patch\\.");
 
 	private final Client client;
 	private final ClientThread clientThread;
@@ -531,7 +524,6 @@ public class RunSession
 			// Shortest Path cannot enter the underwater area; the world/minimap arrow takes over.
 			clearPath();
 		}
-		detectPayment();
 		if (atStop && guide != null && guide.isComplete())
 		{
 			if (++completeTicks >= 3)
@@ -545,31 +537,11 @@ public class RunSession
 		}
 	}
 
-	private void detectPayment()
-	{
-		if (!atStop || guide == null || guide.isComplete())
-		{
-			return;
-		}
-		Widget text = client.getWidget(InterfaceID.ChatLeft.TEXT);
-		if (text == null || !PAYMENT_TEXT.contains(text.getText()))
-		{
-			return;
-		}
-		Widget head = client.getWidget(InterfaceID.ChatLeft.HEAD);
-		if (head != null && head.getModelType() == WidgetModelType.NPC_CHATHEAD)
-		{
-			guide.onPayment();
-			patchTracker.markPaid(route.get(index));
-			updateCurrentTasks();
-		}
-	}
-
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
 		String message = event.getMessage();
-		if (event.getType() == ChatMessageType.GAMEMESSAGE && atStop && guide != null
+		if (event.getType() == ChatMessageType.GAMEMESSAGE && active && guide != null
 			&& FALADOR_DIARY_TEXT.equals(message))
 		{
 			guide.onPayment();
@@ -579,13 +551,22 @@ public class RunSession
 		}
 		if ((event.getType() == ChatMessageType.GAMEMESSAGE
 			|| event.getType() == ChatMessageType.SPAM)
-			&& atStop && guide != null && guide.phase() == StopGuide.Phase.COMPOST
-			&& (COMPOST_APPLIED.matcher(message).matches()
-				|| COMPOST_ALREADY_APPLIED.matcher(message).matches())
-			&& isNearCurrentPatch())
+			&& active && guide != null)
 		{
-			guide.onCompost();
-			updateCurrentTasks();
+			if (PAYMENT_MADE.matcher(message).matches())
+			{
+				guide.onPayment();
+				patchTracker.markPaid(route.get(index));
+				updateCurrentTasks();
+			}
+			else if (guide.phase() == StopGuide.Phase.COMPOST
+				&& (COMPOST_APPLIED.matcher(message).matches()
+					|| COMPOST_ALREADY_APPLIED.matcher(message).matches())
+				&& isNearCurrentPatch())
+			{
+				guide.onCompost();
+				updateCurrentTasks();
+			}
 		}
 	}
 

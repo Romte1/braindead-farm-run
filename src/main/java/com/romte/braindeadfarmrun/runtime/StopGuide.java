@@ -193,9 +193,9 @@ final class StopGuide
 
 	void onPayment()
 	{
+		paid = true;
 		if (phase == Phase.PAY || (phase == Phase.PLANT && isNewlyPlanted(status())))
 		{
-			paid = true;
 			phase = Phase.COMPLETE;
 		}
 	}
