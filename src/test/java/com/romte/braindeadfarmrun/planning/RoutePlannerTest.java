@@ -3,8 +3,10 @@ package com.romte.braindeadfarmrun.planning;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.romte.braindeadfarmrun.data.Patches;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -62,6 +64,23 @@ public class RoutePlannerTest
 
 		assertEquals("herb", route.get(0).getId());
 		assertEquals("seaweed", route.get(1).getId());
+	}
+
+	@Test
+	public void sameSitePatchesStayTogether()
+	{
+		List<PatchDefinition> patches = new ArrayList<>();
+		patches.addAll(Patches.forType(PatchType.HERB));
+		patches.addAll(Patches.forType(PatchType.ALLOTMENT));
+
+		List<PatchDefinition> route = RoutePlanner.plan(patches, 3222, 3418);
+		int herb = route.indexOf(Patches.byId("falador_herb"));
+		int north = route.indexOf(Patches.byId("falador_allotment_a"));
+		int south = route.indexOf(Patches.byId("falador_allotment_b"));
+		int min = Math.min(herb, Math.min(north, south));
+		int max = Math.max(herb, Math.max(north, south));
+
+		assertEquals(3, max - min + 1);
 	}
 
 	@Test
