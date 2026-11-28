@@ -105,6 +105,31 @@ public final class PatchState
 		return empty(patchId);
 	}
 
+	@Override
+	public boolean equals(Object other)
+	{
+		if (this == other)
+		{
+			return true;
+		}
+		if (!(other instanceof PatchState))
+		{
+			return false;
+		}
+		PatchState state = (PatchState) other;
+		return paid == state.paid && diseased == state.diseased && dead == state.dead
+			&& stump == state.stump && checkHealth == state.checkHealth && fell == state.fell
+			&& weedy == state.weedy && patchId.equals(state.patchId) && crop == state.crop
+			&& Objects.equals(plantedAt, state.plantedAt);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(patchId, crop, plantedAt, paid, diseased, dead, stump, checkHealth,
+			fell, weedy);
+	}
+
 	public Status statusAt(Instant now)
 	{
 		if (crop == null)

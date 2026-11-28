@@ -544,6 +544,7 @@ public class RunSession
 			message("At " + target.getDisplayName()
 				+ ". The next stop opens automatically when the steps are done.");
 		}
+		refreshCurrentPatchState(target, location);
 		updateCurrentTasks();
 		if (target.getType() == PatchType.SEAWEED && isUnderwater())
 		{
@@ -551,6 +552,29 @@ public class RunSession
 			clearPath();
 		}
 		advanceIfComplete();
+	}
+
+	private void refreshCurrentPatchState(PatchDefinition target, WorldPoint location)
+	{
+		if (!atStop || guide == null
+			|| distance(location.getX(), location.getY(), target.getX(), target.getY())
+				> ARRIVAL_RADIUS)
+		{
+			return;
+		}
+		PatchState before = patchTracker.snapshot().get(target.getId());
+		patchTracker.refresh(target);
+		PatchState after = patchTracker.snapshot().get(target.getId());
+		if (before == null ? after == null : before.equals(after))
+		{
+			return;
+		}
+		WorldPoint previousTarget = stopNavigationPoint;
+		beginStop();
+		if (previousTarget != null && !previousTarget.equals(stopNavigationPoint))
+		{
+			sendCurrentTarget(false);
+		}
 	}
 
 	private void advanceIfComplete()
