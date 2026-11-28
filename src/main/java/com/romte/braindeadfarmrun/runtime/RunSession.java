@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.extern.slf4j.Slf4j;
@@ -29,10 +30,8 @@ import net.runelite.api.Player;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
-import net.runelite.api.gameval.ItemID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetModelType;
 import net.runelite.client.callback.ClientThread;
@@ -55,6 +54,10 @@ public class RunSession
 	private static final String PREFIX = "<col=00bfff>Braindead Farm Run:</col> ";
 	private static final String FALADOR_DIARY_TEXT = "The gardener protects your tree for you, "
 		+ "free of charge, as a token of gratitude for completing the Falador elite diary.";
+	private static final Pattern COMPOST_APPLIED = Pattern.compile(
+		"You treat the .+ with (?:ultra|super)?compost\\.");
+	private static final Pattern COMPOST_ALREADY_APPLIED = Pattern.compile(
+		"This .+ has already been (?:treated|fertilised) with (?:ultra|super)?compost.*");
 	private static final Set<String> PAYMENT_TEXT = Set.of(
 		"That'll do nicely, sir. Leave it with me - I'll make sure<br>that patch grows for you.",
 		"That'll do nicely, madam. Leave it with me - I'll make<br>sure that patch grows for you.",
@@ -565,45 +568,38 @@ public class RunSession
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
+		String message = event.getMessage();
 		if (event.getType() == ChatMessageType.GAMEMESSAGE && atStop && guide != null
-			&& FALADOR_DIARY_TEXT.equals(event.getMessage()))
+			&& FALADOR_DIARY_TEXT.equals(message))
 		{
 			guide.onPayment();
 			patchTracker.markPaid(route.get(index));
 			updateCurrentTasks();
+			return;
+		}
+		if ((event.getType() == ChatMessageType.GAMEMESSAGE
+			|| event.getType() == ChatMessageType.SPAM)
+			&& atStop && guide != null && guide.phase() == StopGuide.Phase.COMPOST
+			&& (COMPOST_APPLIED.matcher(message).matches()
+				|| COMPOST_ALREADY_APPLIED.matcher(message).matches())
+			&& isNearCurrentPatch())
+		{
+			guide.onCompost();
+			updateCurrentTasks();
 		}
 	}
 
-	@Subscribe
-	public void onMenuOptionClicked(MenuOptionClicked event)
+	private boolean isNearCurrentPatch()
 	{
-		if (!active || !atStop || guide == null || guide.phase() != StopGuide.Phase.COMPOST
-			|| !isCompostItem(event.getItemId()))
-		{
-			return;
-		}
 		PatchDefinition patch = currentPatch();
 		Player player = client.getLocalPlayer();
 		if (patch == null || player == null || player.getWorldLocation() == null)
 		{
-			return;
+			return false;
 		}
 		WorldPoint location = player.getWorldLocation();
-		if (distance(location.getX(), location.getY(), patch.getX(), patch.getY())
-			> ARRIVAL_RADIUS + 2)
-		{
-			return;
-		}
-		guide.onCompost();
-		updateCurrentTasks();
-	}
-
-	private static boolean isCompostItem(int itemId)
-	{
-		return itemId == ItemID.BUCKET_ULTRACOMPOST
-			|| itemId == ItemID.BUCKET_SUPERCOMPOST
-			|| itemId == ItemID.BUCKET_COMPOST
-			|| itemId == ItemID.BOTTOMLESS_COMPOST_BUCKET_FILLED;
+		return distance(location.getX(), location.getY(), patch.getX(), patch.getY())
+			<= ARRIVAL_RADIUS + 2;
 	}
 
 	private void startOnClientThread(Set<PatchType> types)
