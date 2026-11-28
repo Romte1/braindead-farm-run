@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -75,6 +76,8 @@ public class RunSession
 	private volatile boolean routeReady;
 	private volatile boolean atStop;
 	private volatile List<String> currentTasks = Collections.emptyList();
+	private final Set<String> compostedPatches = new HashSet<>();
+	private final Set<String> paidPatches = new HashSet<>();
 	private StopGuide guide;
 	private int completeTicks;
 	private WorldPoint lastTarget;
@@ -156,7 +159,11 @@ public class RunSession
 		PatchDefinition patch = route.get(index);
 		PatchState state = patchTracker.snapshot().get(patch.getId());
 		guide = new StopGuide(patch, state, seedSelector.cropFor(patch.getType()),
-			supplyPlanner.compostItemName());
+			supplyPlanner.compostItemName(), compostedPatches.contains(patch.getId()));
+		if (paidPatches.contains(patch.getId()))
+		{
+			guide.onPayment();
+		}
 		lastGuideKey = null;
 		updateCurrentTasks();
 	}
@@ -555,6 +562,11 @@ public class RunSession
 		{
 			if (PAYMENT_MADE.matcher(message).matches())
 			{
+				PatchDefinition patch = currentPatch();
+				if (patch != null)
+				{
+					paidPatches.add(patch.getId());
+				}
 				guide.onPayment();
 				patchTracker.markPaid(route.get(index));
 				updateCurrentTasks();
@@ -563,6 +575,11 @@ public class RunSession
 				&& (COMPOST_APPLIED.matcher(message).matches()
 					|| COMPOST_ALREADY_APPLIED.matcher(message).matches()))
 			{
+				PatchDefinition patch = currentPatch();
+				if (patch != null)
+				{
+					compostedPatches.add(patch.getId());
+				}
 				guide.onCompost();
 				updateCurrentTasks();
 			}
@@ -657,6 +674,8 @@ public class RunSession
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
 		index = 0;
+		compostedPatches.clear();
+		paidPatches.clear();
 		shortestPath.clearResults();
 		clearPath();
 		if (announce && wasActive)
@@ -677,6 +696,8 @@ public class RunSession
 		currentTasks = Collections.emptyList();
 		route = Collections.emptyList();
 		index = 0;
+		compostedPatches.clear();
+		paidPatches.clear();
 		shortestPath.clearResults();
 		clearPath();
 		message("Run complete.");

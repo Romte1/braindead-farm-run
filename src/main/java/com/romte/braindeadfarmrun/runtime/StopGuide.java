@@ -52,7 +52,7 @@ final class StopGuide
 	private String plantItemName;
 
 	StopGuide(PatchDefinition patch, PatchState initialState, Crop plannedCrop,
-		String compostItemName)
+		String compostItemName, boolean composted)
 	{
 		this.type = patch.getType();
 		this.state = initialState;
@@ -123,7 +123,7 @@ final class StopGuide
 		{
 			steps.add(new Step(Phase.REMOVE, "Rake the weeds."));
 		}
-		if (status != PatchState.Status.GROWING && compostItemName != null
+		if (!composted && status != PatchState.Status.GROWING && compostItemName != null
 			&& !compostItemName.isEmpty())
 		{
 			steps.add(new Step(Phase.COMPOST,
