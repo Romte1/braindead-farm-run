@@ -159,7 +159,8 @@ public class RunSession
 		PatchDefinition patch = route.get(index);
 		PatchState state = patchTracker.snapshot().get(patch.getId());
 		guide = new StopGuide(patch, state, seedSelector.cropFor(patch.getType()),
-			supplyPlanner.compostItemName(), compostedPatches.contains(patch.getId()));
+			supplyPlanner.compostItemName(), compostedPatches.contains(patch.getId()),
+			supplyPlanner.hasFreeProtection(patch));
 		if (paidPatches.contains(patch.getId()))
 		{
 			guide.onPayment();
@@ -589,6 +590,7 @@ public class RunSession
 	private void startOnClientThread(Set<PatchType> types)
 	{
 		stopOnClientThread(false);
+		supplyPlanner.refreshQuestState();
 		preparing = true;
 
 		List<PatchDefinition> patches = new ArrayList<>();

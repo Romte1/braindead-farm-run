@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Follows the player's actions at one patch and exposes the current checklist. Check-health,
  * clearing and planting are read from the patch varbits; farmer protection is confirmed by the
- * payment dialogue or the Time Tracking protected flag.
+ * payment message or the Time Tracking protected flag.
  */
 final class StopGuide
 {
@@ -52,7 +52,7 @@ final class StopGuide
 	private String plantItemName;
 
 	StopGuide(PatchDefinition patch, PatchState initialState, Crop plannedCrop,
-		String compostItemName, boolean composted)
+		String compostItemName, boolean composted, boolean freeProtection)
 	{
 		this.type = patch.getType();
 		this.state = initialState;
@@ -61,9 +61,9 @@ final class StopGuide
 		PatchState.Status status = status();
 		this.initialCrop = initialState == null ? null : initialState.getCrop();
 		Crop paymentCrop = paymentCrop();
-		this.paymentNeeded = paymentCrop != null
+		this.paymentNeeded = !freeProtection && (paymentCrop != null
 			? paymentCrop.needsPayment()
-			: type != PatchType.HERB;
+			: type != PatchType.HERB);
 		this.farmerRemoval = type == PatchType.TREE && status == PatchState.Status.READY;
 		this.rakeNeeded = initialState != null && initialState.isWeedy();
 		this.plantItemName = plannedCrop == null ? null : plannedCrop.getPlantedItemName();

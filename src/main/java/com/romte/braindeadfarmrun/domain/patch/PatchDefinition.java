@@ -97,6 +97,12 @@ public final class PatchDefinition
 		return bank != null && bank.startsWith("Farming Guild");
 	}
 
+	/** True for the allotment and herb patches around Hosidius. */
+	public boolean isHosidius()
+	{
+		return bank != null && bank.startsWith("Hosidius");
+	}
+
 	public boolean isInRegion(int region)
 	{
 		for (int candidate : regions)

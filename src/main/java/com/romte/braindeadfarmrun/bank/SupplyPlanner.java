@@ -2,6 +2,7 @@ package com.romte.braindeadfarmrun.bank;
 
 import com.romte.braindeadfarmrun.BraindeadFarmRunConfig;
 import com.romte.braindeadfarmrun.domain.patch.Crop;
+import com.romte.braindeadfarmrun.domain.patch.FreeProtection;
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
 import com.romte.braindeadfarmrun.domain.patch.PatchState;
 import com.romte.braindeadfarmrun.domain.patch.PatchType;
@@ -70,6 +71,7 @@ public class SupplyPlanner
 	private final Map<String, int[]> resolveCache = new ConcurrentHashMap<>();
 	private final Map<String, int[]> chargedCache = new ConcurrentHashMap<>();
 	private volatile boolean magicSecateurs;
+	private volatile FreeProtection freeProtection = FreeProtection.NONE;
 
 	@Inject
 	SupplyPlanner(Client client, ItemManager itemManager, BraindeadFarmRunConfig config,
@@ -85,6 +87,18 @@ public class SupplyPlanner
 	public void refreshQuestState()
 	{
 		magicSecateurs = Quest.FAIRYTALE_I__GROWING_PAINS.getState(client) == QuestState.FINISHED;
+		freeProtection = new FreeProtection(
+			client.getVarbitValue(VarbitID.KOUREND_DIARY_EASY_COMPLETE) == 1,
+			client.getVarbitValue(VarbitID.FALADOR_DIARY_ELITE_COMPLETE) == 1,
+			Quest.A_NEW_LEAF.getState(client) == QuestState.FINISHED);
+		log.debug("Quest state: magicSecateurs={} freeProtection: hosidius={} faladorTree={} "
+				+ "guildAllotments={}", magicSecateurs, freeProtection.isHosidius(),
+			freeProtection.isFaladorTree(), freeProtection.isFarmingGuildAllotments());
+	}
+
+	public boolean hasFreeProtection(PatchDefinition patch)
+	{
+		return freeProtection.appliesTo(patch);
 	}
 
 	public List<BankSupplyLine> plan(Set<PatchType> types, Map<String, PatchState> states,
@@ -159,7 +173,7 @@ public class SupplyPlanner
 			{
 				add(lines, SupplyGroup.SEEDS, crop.getPlantedItemName(),
 					crop.getSeedsPerPatch(), resolve(crop.getPlantedItemName()), false);
-				if (crop.needsPayment())
+				if (crop.needsPayment() && !hasFreeProtection(patch))
 				{
 					add(lines, SupplyGroup.PAYMENTS, crop.getPaymentItem(),
 						crop.getPaymentQuantity(), resolve(crop.getPaymentItem()), true);
