@@ -42,6 +42,15 @@ public class TravelItemTest
 	}
 
 	@Test
+	public void digsitePendantUsesChargedVariants()
+	{
+		int[] ids = SupplyPlanner.explicitIds("Digsite pendant");
+		assertEquals(5, ids.length);
+		assertTrue(contains(ids, ItemID.NECKLACE_OF_DIGSITE_1));
+		assertTrue(contains(ids, ItemID.NECKLACE_OF_DIGSITE_5));
+	}
+
+	@Test
 	public void inertAndEmptyVariantsScoreBelowUsefulOnes()
 	{
 		int charged = BankTab.variantScoreForName("Xeric's talisman");
@@ -58,7 +67,7 @@ public class TravelItemTest
 	{
 		for (String name : new String[]{
 			"Explorer's ring", "Ardougne cloak", "Xeric's talisman", "Pendant of ates",
-			"Divine rune pouch", "Axe"
+			"Divine rune pouch", "Digsite pendant", "Axe"
 		})
 		{
 			assertNotNull(name, SupplyPlanner.explicitIds(name));

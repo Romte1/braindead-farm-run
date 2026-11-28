@@ -647,6 +647,12 @@ public class SupplyPlanner
 			case "Xeric's talisman":
 				// The inert version cannot teleport; only the charged talisman is useful.
 				return new int[]{ItemID.XERIC_TALISMAN};
+			case "Digsite pendant":
+				return new int[]{
+					ItemID.NECKLACE_OF_DIGSITE_1, ItemID.NECKLACE_OF_DIGSITE_2,
+					ItemID.NECKLACE_OF_DIGSITE_3, ItemID.NECKLACE_OF_DIGSITE_4,
+					ItemID.NECKLACE_OF_DIGSITE_5
+				};
 			case "Axe":
 				return new int[]{
 					ItemID.BRONZE_AXE, ItemID.IRON_AXE, ItemID.STEEL_AXE, ItemID.BLACK_AXE,
