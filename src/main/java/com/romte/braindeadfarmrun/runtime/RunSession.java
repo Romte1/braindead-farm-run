@@ -47,6 +47,8 @@ import net.runelite.client.game.ItemManager;
 public class RunSession
 {
 	private static final int ARRIVAL_RADIUS = 6;
+	private static final WorldPoint SEAWEED_ACCESS = new WorldPoint(3764, 3899, 0);
+	private static final int SEAWEED_REGION = 15008;
 	private static final String PREFIX = "<col=00bfff>Braindead Farm Run:</col> ";
 	private static final String FALADOR_DIARY_TEXT = "The gardener protects your tree for you, "
 		+ "free of charge, as a token of gratitude for completing the Falador elite diary.";
@@ -165,6 +167,11 @@ public class RunSession
 			return;
 		}
 		PatchDefinition patch = route.get(index);
+		if (patch.getType() == PatchType.SEAWEED && !atStop)
+		{
+			currentTasks = Collections.unmodifiableList(seaweedApproachTasks());
+			return;
+		}
 		PatchState state = patchTracker.snapshot().get(patch.getId());
 		guide.update(state, patchTracker.isProtected(patch));
 		if (guide.phase() == StopGuide.Phase.PLANT && guide.currentItemName() == null)
@@ -347,7 +354,7 @@ public class RunSession
 			{
 				if (routeReady)
 				{
-					shortestPath.query(index, start, point(route.get(index)));
+					shortestPath.query(index, start, navigationPoint(route.get(index)));
 				}
 				else
 				{
@@ -382,13 +389,63 @@ public class RunSession
 	/** True when the current checklist action is talking to the patch farmer. */
 	public boolean currentTargetIsFarmer()
 	{
-		return active && atStop && guide != null && guide.isFarmerTarget();
+		return !isSeaweedApproach() && active && atStop && guide != null
+			&& guide.isFarmerTarget();
 	}
 
 	/** Item the current checklist action needs, or null. */
 	public String currentItemName()
 	{
-		return active && guide != null ? guide.currentItemName() : null;
+		return !isSeaweedApproach() && active && guide != null
+			? guide.currentItemName() : null;
+	}
+
+	/** True while a seaweed run has not reached the underwater area yet. */
+	public boolean isSeaweedApproach()
+	{
+		PatchDefinition patch = currentPatch();
+		return patch != null && patch.getType() == PatchType.SEAWEED && !isUnderwater();
+	}
+
+	/** World point the player should walk or swim towards for the current stop. */
+	public WorldPoint currentNavigationPoint()
+	{
+		PatchDefinition patch = currentPatch();
+		return patch == null ? null : navigationPoint(patch);
+	}
+
+	private List<String> seaweedApproachTasks()
+	{
+		List<String> tasks = new ArrayList<>();
+		if (!isUnderwater())
+		{
+			Player player = client.getLocalPlayer();
+			WorldPoint location = player == null ? null : player.getWorldLocation();
+			if (location == null || distance(location.getX(), location.getY(),
+				SEAWEED_ACCESS.getX(), SEAWEED_ACCESS.getY()) > ARRIVAL_RADIUS)
+			{
+				tasks.add("Travel to the Fossil Island bank island.");
+			}
+			tasks.add("Dive from the rowboat.");
+		}
+		tasks.add("Swim south to the seaweed patch.");
+		return tasks;
+	}
+
+	private boolean isUnderwater()
+	{
+		Player player = client.getLocalPlayer();
+		WorldPoint location = player == null ? null : player.getWorldLocation();
+		return location != null && location.getRegionID() == SEAWEED_REGION;
+	}
+
+	private WorldPoint navigationPoint(PatchDefinition patch)
+	{
+		if (patch.getType() == PatchType.SEAWEED && !isUnderwater())
+		{
+			return SEAWEED_ACCESS;
+		}
+		return point(patch);
 	}
 
 	private String findInventoryPlantItem(PatchDefinition patch)
@@ -459,6 +516,11 @@ public class RunSession
 				+ ". The next stop opens automatically when the steps are done.");
 		}
 		updateCurrentTasks();
+		if (target.getType() == PatchType.SEAWEED && isUnderwater())
+		{
+			// Shortest Path cannot enter the underwater area; the world/minimap arrow takes over.
+			clearPath();
+		}
 		detectPayment();
 		if (atStop && guide != null && guide.isComplete())
 		{
@@ -574,7 +636,7 @@ public class RunSession
 		List<PatchDefinition> current = route;
 		for (int i = from; i < current.size(); i++)
 		{
-			WorldPoint target = point(current.get(i));
+			WorldPoint target = navigationPoint(current.get(i));
 			shortestPath.query(i, legStart, target);
 			legStart = target;
 		}
@@ -637,7 +699,7 @@ public class RunSession
 			return;
 		}
 		PatchDefinition target = current.get(currentIndex);
-		WorldPoint point = new WorldPoint(target.getX(), target.getY(), target.getPlane());
+		WorldPoint point = navigationPoint(target);
 		Map<String, Object> data = new HashMap<>();
 		data.put("target", point);
 		eventBus.post(new PluginMessage("shortestpath", "path", data));

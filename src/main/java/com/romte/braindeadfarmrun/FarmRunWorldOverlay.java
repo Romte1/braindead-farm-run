@@ -76,6 +76,14 @@ public class FarmRunWorldOverlay extends Overlay
 		}
 
 		boolean showArrow = client.getTickCount() % 4 < 2;
+		if (runSession.isSeaweedApproach())
+		{
+			WorldPoint access = runSession.currentNavigationPoint();
+			LocalPoint local = access == null ? null
+				: LocalPoint.fromWorld(client.getTopLevelWorldView(), access);
+			drawTileGuide(graphics, local, showArrow);
+			return null;
+		}
 		if (runSession.currentTargetIsFarmer())
 		{
 			NPC farmer = patchTracker.farmerFor(patch);

@@ -54,6 +54,10 @@ public class FarmRunMinimapOverlay extends Overlay
 
 	private WorldPoint targetOf(PatchDefinition patch)
 	{
+		if (runSession.isSeaweedApproach())
+		{
+			return runSession.currentNavigationPoint();
+		}
 		if (runSession.currentTargetIsFarmer())
 		{
 			NPC farmer = patchTracker.farmerFor(patch);

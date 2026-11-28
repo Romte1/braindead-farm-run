@@ -18,6 +18,8 @@ A RuneLite plugin for planning and tracking **allotment, herb, tree, fruit tree,
 - Show the next step and highlight the relevant patch and inventory items.
 - Provide a Farm run tab in the bank with stable placeholders and noted/unnoted labels.
 - Optionally send each stop to Shortest Path for a walking line.
+- Route seaweed runs to the Fossil Island bank island, then guide the dive and swim to the
+  patches because Shortest Path cannot enter the underwater area.
 
 ## Scope
 

@@ -52,8 +52,25 @@ public class RoutePlannerTest
 		assertEquals("only", route.get(0).getId());
 	}
 
+	@Test
+	public void seaweedIsAlwaysLast()
+	{
+		PatchDefinition herb = patch("herb", 20, 20);
+		PatchDefinition seaweed = patch("seaweed", 1, 1, PatchType.SEAWEED);
+
+		List<PatchDefinition> route = RoutePlanner.plan(Arrays.asList(herb, seaweed), 0, 0);
+
+		assertEquals("herb", route.get(0).getId());
+		assertEquals("seaweed", route.get(1).getId());
+	}
+
 	private static PatchDefinition patch(String id, int x, int y)
 	{
-		return new PatchDefinition(id, id, PatchType.HERB, x, y, 0, new int[]{1}, 1, null, null);
+		return patch(id, x, y, PatchType.HERB);
+	}
+
+	private static PatchDefinition patch(String id, int x, int y, PatchType type)
+	{
+		return new PatchDefinition(id, id, type, x, y, 0, new int[]{1}, 1, null, null);
 	}
 }

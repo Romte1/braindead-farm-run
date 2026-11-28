@@ -1,6 +1,7 @@
 package com.romte.braindeadfarmrun.planning;
 
 import com.romte.braindeadfarmrun.domain.patch.PatchDefinition;
+import com.romte.braindeadfarmrun.domain.patch.PatchType;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,7 +41,27 @@ public final class RoutePlanner
 			x = next.getX();
 			y = next.getY();
 		}
-		return route;
+		return seaweedLast(route);
+	}
+
+	/** Seaweed requires diving and cannot be used as an intermediate leg for Shortest Path. */
+	private static List<PatchDefinition> seaweedLast(List<PatchDefinition> route)
+	{
+		List<PatchDefinition> ordered = new ArrayList<>(route.size());
+		List<PatchDefinition> seaweed = new ArrayList<>();
+		for (PatchDefinition patch : route)
+		{
+			if (patch.getType() == PatchType.SEAWEED)
+			{
+				seaweed.add(patch);
+			}
+			else
+			{
+				ordered.add(patch);
+			}
+		}
+		ordered.addAll(seaweed);
+		return ordered;
 	}
 
 	private static int distance(int x1, int y1, int x2, int y2)
