@@ -19,9 +19,13 @@ import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
+import net.runelite.api.Scene;
+import net.runelite.api.Tile;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -79,9 +83,21 @@ public class FarmRunWorldOverlay extends Overlay
 		if (runSession.isSeaweedApproach())
 		{
 			WorldPoint access = runSession.currentNavigationPoint();
-			LocalPoint local = access == null ? null
-				: LocalPoint.fromWorld(client.getTopLevelWorldView(), access);
-			drawTileGuide(graphics, local, showArrow);
+			GameObject rowboat = access == null ? null : findRowboat(access);
+			if (rowboat != null)
+			{
+				outlineRenderer.drawOutline(rowboat, OUTLINE_THICKNESS, GUIDE, OUTLINE_FEATHERING);
+				if (showArrow)
+				{
+					drawArrowOverObject(graphics, rowboat);
+				}
+			}
+			else
+			{
+				LocalPoint local = access == null ? null
+					: LocalPoint.fromWorld(client.getTopLevelWorldView(), access);
+				drawTileGuide(graphics, local, showArrow);
+			}
 			return null;
 		}
 		if (runSession.currentTargetIsFarmer())
@@ -142,6 +158,64 @@ public class FarmRunWorldOverlay extends Overlay
 			return;
 		}
 		drawArrowAbove(graphics, object.getConvexHull());
+	}
+
+	/** The bank-island rowboat has no farming varbit, so find it around the dive point. */
+	private GameObject findRowboat(WorldPoint point)
+	{
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null || worldView.getScene() == null)
+		{
+			return null;
+		}
+		Scene scene = worldView.getScene();
+		Tile[][][] tiles = scene.getTiles();
+		int plane = point.getPlane();
+		int baseX = worldView.getBaseX();
+		int baseY = worldView.getBaseY();
+		int sceneX = point.getX() - baseX;
+		int sceneY = point.getY() - baseY;
+		if (plane < 0 || plane >= tiles.length)
+		{
+			return null;
+		}
+		GameObject best = null;
+		int bestDistance = Integer.MAX_VALUE;
+		for (int dx = -8; dx <= 8; dx++)
+		{
+			for (int dy = -8; dy <= 8; dy++)
+			{
+				int x = sceneX + dx;
+				int y = sceneY + dy;
+				if (x < 0 || y < 0 || x >= tiles[plane].length
+					|| y >= tiles[plane][x].length || tiles[plane][x][y] == null)
+				{
+					continue;
+				}
+				GameObject[] objects = tiles[plane][x][y].getGameObjects();
+				if (objects == null)
+				{
+					continue;
+				}
+				for (GameObject object : objects)
+				{
+					if (object == null || object.getId() != ObjectID.FOSSIL_ROWBOAT_DIVING)
+					{
+						continue;
+					}
+					WorldPoint location = object.getWorldLocation();
+					int distance = location == null ? Integer.MAX_VALUE
+						: Math.max(Math.abs(location.getX() - point.getX()),
+							Math.abs(location.getY() - point.getY()));
+					if (distance < bestDistance)
+					{
+						best = object;
+						bestDistance = distance;
+					}
+				}
+			}
+		}
+		return best;
 	}
 
 	private void drawActionItem(Graphics2D graphics, Shape shape, LocalPoint local)
