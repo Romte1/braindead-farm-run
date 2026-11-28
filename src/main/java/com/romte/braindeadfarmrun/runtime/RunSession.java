@@ -531,9 +531,16 @@ public class RunSession
 		if (!atStop
 			&& distance(location.getX(), location.getY(), target.getX(), target.getY()) <= ARRIVAL_RADIUS)
 		{
+			WorldPoint previousTarget = stopNavigationPoint;
 			atStop = true;
 			patchTracker.refresh(target);
 			beginStop();
+			if (previousTarget != null && !previousTarget.equals(stopNavigationPoint))
+			{
+				// The patch object and leprechaun are loaded now; move the displayed path to
+				// the nearest usable tile instead of the static patch coordinate.
+				sendCurrentTarget(false);
+			}
 			message("At " + target.getDisplayName()
 				+ ". The next stop opens automatically when the steps are done.");
 		}
