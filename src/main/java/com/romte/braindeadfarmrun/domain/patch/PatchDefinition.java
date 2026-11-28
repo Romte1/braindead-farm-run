@@ -91,6 +91,12 @@ public final class PatchDefinition
 		return bank;
 	}
 
+	/** True for the patches inside the Farming Guild. */
+	public boolean isFarmingGuild()
+	{
+		return bank != null && bank.startsWith("Farming Guild");
+	}
+
 	public boolean isInRegion(int region)
 	{
 		for (int candidate : regions)

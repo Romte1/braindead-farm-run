@@ -41,13 +41,17 @@ public final class RoutePlanner
 			x = next.getX();
 			y = next.getY();
 		}
-		return seaweedLast(route);
+		return guildAndSeaweedLast(route);
 	}
 
-	/** Seaweed requires diving and cannot be used as an intermediate leg for Shortest Path. */
-	private static List<PatchDefinition> seaweedLast(List<PatchDefinition> route)
+	/**
+	 * Farming Guild patches are saved for the end of the run, and the underwater seaweed patches
+	 * stay after them because Shortest Path cannot use them as an intermediate leg.
+	 */
+	private static List<PatchDefinition> guildAndSeaweedLast(List<PatchDefinition> route)
 	{
 		List<PatchDefinition> ordered = new ArrayList<>(route.size());
+		List<PatchDefinition> guild = new ArrayList<>();
 		List<PatchDefinition> seaweed = new ArrayList<>();
 		for (PatchDefinition patch : route)
 		{
@@ -55,11 +59,16 @@ public final class RoutePlanner
 			{
 				seaweed.add(patch);
 			}
+			else if (patch.isFarmingGuild())
+			{
+				guild.add(patch);
+			}
 			else
 			{
 				ordered.add(patch);
 			}
 		}
+		ordered.addAll(guild);
 		ordered.addAll(seaweed);
 		return ordered;
 	}

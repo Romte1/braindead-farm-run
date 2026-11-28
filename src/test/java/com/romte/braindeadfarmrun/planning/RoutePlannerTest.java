@@ -64,6 +64,20 @@ public class RoutePlannerTest
 		assertEquals("seaweed", route.get(1).getId());
 	}
 
+	@Test
+	public void farmingGuildComesAfterOtherPatchesButBeforeSeaweed()
+	{
+		PatchDefinition herb = patch("herb", 1, 1);
+		PatchDefinition guild = patch("guild", 2, 2, PatchType.ALLOTMENT, "Farming Guild bank");
+		PatchDefinition seaweed = patch("seaweed", 3, 3, PatchType.SEAWEED);
+
+		List<PatchDefinition> route = RoutePlanner.plan(Arrays.asList(seaweed, guild, herb), 0, 0);
+
+		assertEquals("herb", route.get(0).getId());
+		assertEquals("guild", route.get(1).getId());
+		assertEquals("seaweed", route.get(2).getId());
+	}
+
 	private static PatchDefinition patch(String id, int x, int y)
 	{
 		return patch(id, x, y, PatchType.HERB);
@@ -71,6 +85,11 @@ public class RoutePlannerTest
 
 	private static PatchDefinition patch(String id, int x, int y, PatchType type)
 	{
-		return new PatchDefinition(id, id, type, x, y, 0, new int[]{1}, 1, null, null);
+		return patch(id, x, y, type, null);
+	}
+
+	private static PatchDefinition patch(String id, int x, int y, PatchType type, String bank)
+	{
+		return new PatchDefinition(id, id, type, x, y, 0, new int[]{1}, 1, null, bank);
 	}
 }
